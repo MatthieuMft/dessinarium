@@ -376,6 +376,25 @@ input[type=range]{width:100%;accent-color:#a67ae8;min-width:0}
   .win.ed .adv summary{font-size:0;width:46px;height:46px;padding:0;gap:0;display:grid;place-items:center}
   .win.ed .adv summary::after,.win.ed .adv[open] summary::after{content:"\22EF";font-size:26px;color:var(--bone);line-height:1}
 }
+
+/* grimoire : onglets d'histoire */
+#carnetList[hidden],#sagaBody[hidden],#carnetIntro[hidden]{display:none!important}
+#carnet .tabs{margin-bottom:6px}
+#sagaBody{display:grid;gap:10px;overflow:auto;min-height:0;align-content:start}
+.sg-intro{text-align:center;margin:0 0 4px}
+.sg-card{padding:10px 12px;border-radius:10px;background:var(--card);border:2px solid var(--line);display:grid;gap:5px}
+.sg-card.ok{border-color:#6b4aa8}
+.sg-h{font-weight:700;font-size:16px;color:var(--bone);letter-spacing:.03em}
+.sg-t{font-family:var(--text);font-weight:600;font-size:15.5px;color:var(--txt2);line-height:1.35}
+.sg-t.done{color:#b9a36c}
+.sg-lore{font-style:italic;color:var(--txt)}
+.sg-m{font-family:var(--text);font-weight:600;font-size:14px;color:#8d83a6}
+.sg-goal{display:flex;justify-content:space-between;gap:8px}
+.sg-bar{height:8px;border-radius:4px;background:#2a2040;overflow:hidden}
+.sg-bar i{display:block;height:100%;background:linear-gradient(90deg,#5a2aa8,#b07bff)}
+.sg-chips{display:flex;flex-wrap:wrap;gap:6px}
+.sg-chip{padding:4px 10px;border-radius:999px;font-family:var(--text);font-weight:700;font-size:14px;background:#1c1430;color:#6b6283;border:1px solid #33284a}
+.sg-chip.on{background:#3a2766;color:var(--bone);border-color:#8d6bd0}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 </head>
@@ -430,9 +449,11 @@ input[type=range]{width:100%;accent-color:#a67ae8;min-width:0}
 <div class="modal" id="carnet" hidden role="dialog" aria-modal="true" aria-label="Grimoire">
   <div class="win small">
     <div class="ribbon">Grimoire</div><button class="x" aria-label="Fermer">&times;</button>
-    <p class="sub" style="text-align:center;margin:0 0 10px">Les créatures que tu as libérées dans les ténèbres. Tu peux les rappeler quand tu veux.</p>
+    <div class="tabs" id="carnetTabs"></div>
+    <p class="sub" id="carnetIntro" style="text-align:center;margin:0 0 10px">Les créatures que tu as libérées dans les ténèbres. Tu peux les rappeler quand tu veux.</p>
     <ul id="carnetList"></ul>
     <div class="empty" id="carnetEmpty">Ton grimoire est vide.<br>Clique sur une créature, puis sur « Relâcher ».</div>
+    <div id="sagaBody" hidden></div>
   </div>
 </div>
 
@@ -841,7 +862,7 @@ function addCreature(o, opts = {}){
   const T = TYPES[o.type];
   const c = {
     id: o.id || ('c' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6)),
-    type: o.type, name: o.name, base: o.sprite, fixed: !!o.fixed, shopId: o.shopId || null, w: o.sprite.width, h: o.sprite.height,
+    type: o.type, name: o.name, base: o.sprite, fixed: !!o.fixed, shopId: o.shopId || null, hy: o.hy || null, w: o.sprite.width, h: o.sprite.height,
     png: o.png || o.sprite.toDataURL('image/png'), xp: o.xp || 0, born: o.born || Date.now(),
     animal: !!T.animal, anchored: !!T.anchored, layer: o.layer === 'front' ? 'front' : 'back', flip: !!o.flip, sz: clamp(+o.sz || 1, .4, 2.5),
     x: 0, y: 0, vx: 0, vy: 0, face: 1, dir: 1, ang: 0, wag: rand(0, 6), phase: rand(0, 6), pulseT: Math.random(), hunger: rand(.5, .9),
@@ -885,7 +906,7 @@ function releaseCreature(c){
   toast(`${c.name} s’enfonce dans les ténèbres…`);
 }
 function finishRelease(c){
-  state.carnet.unshift({ id: c.id, type: c.type, name: c.name, png: c.png, xp: c.xp, born: c.born });
+  state.carnet.unshift({ id: c.id, type: c.type, name: c.name, png: c.png, xp: c.xp, born: c.born, hy: c.hy || null });
   if (state.carnet.length > 60) state.carnet.length = 60;
   removeCreature(c); toast(`${c.name} rejoint ton grimoire : tu pourras le rappeler.`); uiCarnet();
 }
@@ -894,7 +915,7 @@ async function recallCreature(id){
   if (residentCount() >= maxResidents()){ toast('L’aquarium est plein : relâche un habitant ou agrandis-le dans la boutique.'); return; }
   const e = state.carnet[i], im = await loadImg(e.png); if (!im) return;
   const cv = document.createElement('canvas'); cv.width = im.width; cv.height = im.height; cv.getContext('2d', { willReadFrequently: true }).drawImage(im, 0, 0);
-  state.carnet.splice(i, 1); addCreature({ id: e.id, type: e.type, name: e.name, sprite: cv, png: e.png, xp: e.xp, born: e.born }, { spawn: true });
+  state.carnet.splice(i, 1); addCreature({ id: e.id, type: e.type, name: e.name, sprite: cv, png: e.png, xp: e.xp, born: e.born, hy: e.hy || null }, { spawn: true });
   toast(`${e.name} est de retour !`); uiCarnet();
 }
 
@@ -902,7 +923,7 @@ async function recallCreature(id){
 function addCoins(n){ state.coins += n; uiCoins(); saveSoon(); }
 function dropCoin(c){
   if (pickups.length > 40) return;
-  pickups.push({ x: c.x + rand(-10, 10), y: c.y, vy: 22 + Math.random() * 12, v: Math.round(COIN_VALUE[c.level] * (c.love >= 80 ? 1.5 : 1)), rest: sandTop() + 8 + Math.random() * sandH * .35, life: 26, ph: Math.random() * 6, dead: false });
+  pickups.push({ x: c.x + rand(-10, 10), y: c.y, vy: 22 + Math.random() * 12, v: Math.max(1, Math.round(COIN_VALUE[c.level] * (c.love >= 80 ? 1.5 : 1) * sagaMul(c))), rest: sandTop() + 8 + Math.random() * sandH * .35, life: 26, ph: Math.random() * 6, dead: false });
   if (c.st) c.st.coins += pickups[pickups.length - 1].v;
 }
 function coinAt(x, y){ for (const p of pickups){ if (!p.dead && Math.hypot(x - p.x, y - p.y) < 22 + Math.min(8, p.v) + (COARSE ? 14 : 0)) return p; } return null; }
@@ -1226,8 +1247,8 @@ function frame(now){
 let saveTimer = 0;
 function stateObj(){
   return { v: 3, savedAt: Date.now(), settings, stats,
-    state: { coins: state.coins, owned: [...state.owned], cap: state.cap, render: state.render, carnet: state.carnet, gifts: state.gifts },
-    creatures: creatures.map(c => ({ id:c.id, type:c.type, name:c.name, png:c.shopId ? null : c.png, shopId:c.shopId, xp:c.xp, born:c.born, sf:c.sf, fx:c.x / W, fy:c.y / H, layer:c.layer, flip:c.flip, sz:c.sz, bd:c.bd, fixed:c.fixed, pers:c.pers, friend:c.friend, love:c.love, likes:c.likes, hates:c.hates, known:c.known, log:c.log, tricks:c.tricks, trickProg:c.trickProg, st:c.st })) };
+    state: { coins: state.coins, owned: [...state.owned], cap: state.cap, render: state.render, carnet: state.carnet, gifts: state.gifts, saga: state.saga },
+    creatures: creatures.map(c => ({ id:c.id, type:c.type, name:c.name, png:c.shopId ? null : c.png, shopId:c.shopId, hy:c.hy, xp:c.xp, born:c.born, sf:c.sf, fx:c.x / W, fy:c.y / H, layer:c.layer, flip:c.flip, sz:c.sz, bd:c.bd, fixed:c.fixed, pers:c.pers, friend:c.friend, love:c.love, likes:c.likes, hates:c.hates, known:c.known, log:c.log, tricks:c.tricks, trickProg:c.trickProg, st:c.st })) };
 }
 function saveSoon(){ clearTimeout(saveTimer); saveTimer = setTimeout(save, 700); }
 function save(){
@@ -1251,7 +1272,7 @@ async function applyState(data){
   settings.auto = false; settings.light = clamp(+settings.light || def.light, 0, 1); settings.bubbles = clamp(settings.bubbles | 0, 0, 3);
   stats = Object.assign({ xp:0, drawn:0, fed:0, hatched:0, visits:0, chests:0, birthdays:0, maxLevel:0 }, data.stats || {});
   const s = data.state || {};
-  state = Object.assign(DEFAULT_STATE(), { coins: Number.isFinite(s.coins) ? s.coins : 60, cap: clamp(s.cap | 0, 0, 6), render: MEDIUMS.some(m => m[0] === s.render) ? s.render : 'natural', carnet: Array.isArray(s.carnet) ? s.carnet.slice(0, 60) : [], gifts: s.gifts && typeof s.gifts === 'object' ? s.gifts : {} });
+  state = Object.assign(DEFAULT_STATE(), { coins: Number.isFinite(s.coins) ? s.coins : 60, cap: clamp(s.cap | 0, 0, 6), render: MEDIUMS.some(m => m[0] === s.render) ? s.render : 'natural', carnet: Array.isArray(s.carnet) ? s.carnet.slice(0, 60) : [], gifts: s.gifts && typeof s.gifts === 'object' ? s.gifts : {}, saga: s.saga && typeof s.saga === 'object' ? s.saga : SAGA_DEF() });
   state.owned = new Set(Array.isArray(s.owned) ? s.owned : []); initOwned();
   scene.bg = scene.floor = null;
   for (const k of ['bg', 'floor']) if (settings[k + 'Img']){ const im = await loadImg(settings[k + 'Img']); if (im) scene[k] = copyCanvas(im); else settings[k + 'Img'] = null; }
@@ -1261,7 +1282,7 @@ async function applyState(data){
     let cv, png = o.png;
     if (dd){ cv = paintify(spriteFrom(dd.paint()), dd.medium, hashStr(dd.id)); png = cv.toDataURL('image/png'); o.fixed = true; }
     else { const im = await loadImg(o.png); if (!im) continue; cv = document.createElement('canvas'); cv.width = im.width; cv.height = im.height; cv.getContext('2d', { willReadFrequently: true }).drawImage(im, 0, 0); }
-    addCreature({ shopId:o.shopId, id:o.id, type:o.type, name:String(o.name || '').slice(0, 18) || TYPES[o.type].label, sprite:cv, png:png, xp:o.xp | 0, born:o.born, sf:o.sf, fx:o.fx, fy:o.fy, layer:o.layer, flip:o.flip, sz:o.sz, bd:o.bd, fixed:o.fixed, pers:o.pers, friend:o.friend, love:o.love, likes:o.likes, hates:o.hates, known:o.known, log:o.log, tricks:o.tricks, trick:o.trick, trickProg:o.trickProg, st:o.st });
+    addCreature({ hy:o.hy, shopId:o.shopId, id:o.id, type:o.type, name:String(o.name || '').slice(0, 18) || TYPES[o.type].label, sprite:cv, png:png, xp:o.xp | 0, born:o.born, sf:o.sf, fx:o.fx, fy:o.fy, layer:o.layer, flip:o.flip, sz:o.sz, bd:o.bd, fixed:o.fixed, pers:o.pers, friend:o.friend, love:o.love, likes:o.likes, hates:o.hates, known:o.known, log:o.log, tricks:o.tricks, trick:o.trick, trickProg:o.trickProg, st:o.st });
   }
   for (const c of creatures) if (c.friend && !creatures.some(o => o.id === c.friend)) c.friend = null;
   if (W){ buildBg(); buildGlass(); }
@@ -1921,7 +1942,7 @@ function spawnChest(){
   toast('Un coffre maudit gît sur le sol…'); snd('sparkle'); return true;
 }
 function openChest(c){
-  if (c.open) return; c.open = true; c.openAt = c.t; bump('chests'); sparkle(c.x, c.y - c.dh * .6, 26); confetti(c.x, c.y - c.dh * .6, 20); snd('fanfare');
+  if (c.open) return; c.open = true; c.openAt = c.t; bump('chests'); if (Math.random() < .4) setTimeout(grantLore, 1500); if (Math.random() < .3) setTimeout(() => { if (addMap()) toast('Une carte au trésor était cachée dans le coffre !'); }, 2200); sparkle(c.x, c.y - c.dh * .6, 26); confetti(c.x, c.y - c.dh * .6, 20); snd('fanfare');
   const gain = 25 + ((Math.random() * 35) | 0); setTimeout(() => { addCoins(gain); toast(`Le coffre contenait ${gain} perles noires !`); for (let i = 0; i < 10; i++) fx.push({ k:'f', x:c.x + rand(-30, 30), y:c.y - c.dh * .6, sx:c.x + rand(-30, 30), sy:c.y - c.dh * .6, tx:hudCoinPos().x, ty:hudCoinPos().y, t:-i * .06, d:.7, v:0 }); }, 500);
 }
 
@@ -1944,6 +1965,7 @@ function breedTick(){
   a.sch = b.sch = 'love'; a.cool = b.cool = now + 240000; loves.push({ a, b, t: 4.5, h: 0 });
 }
 function hatch(e){
+  if (typeof hatchHybrid === 'function' && hatchHybrid(e)) return;
   const par = Math.random() < .5 ? e.s1 : e.s2, deg = (Math.random() < .5 ? -1 : 1) * rand(25, 70);
   const c = addCreature({ type:'fish', name:pickOne(NAMES), sprite:hueShift(par, deg), xp:0, born:Date.now() });
   c.x = e.x; c.y = e.y; c.tx = c.x; c.ty = c.y; c.cool = Date.now() + 180000;
@@ -1973,7 +1995,7 @@ function triggerEvent(k, manual){
   else if (k === 'chest'){ ok = spawnChest(); if (!ok && manual) toast('Un coffre attend déjà d’être ouvert.'); }
   else if (k === 'manna') manna();
   else ok = eventsTrigger(k, manual);
-  if (ok) stats.events = (stats.events || 0) + 1;
+  if (ok){ stats.events = (stats.events || 0) + 1; sagaSeen('evt:' + k); }
   return ok;
 }
 
@@ -2007,7 +2029,7 @@ function worldUpdate(dt){
     if (!creatures.includes(L.a) || !creatures.includes(L.b)){ L.t = -1; L.gone = true; }
     if (L.t <= 0){
       L.a.sch = L.b.sch = null; L.a.retarget = L.b.retarget = 0;
-      if (!L.gone){ eggs.push({ x:(L.a.x + L.b.x) / 2, y:(L.a.y + L.b.y) / 2, vy:16, rest:sandTop() - 8 - rand(0, 30), t:0, hatch:24, ph:rand(0, 6), s1:L.a.base, s2:L.b.base });
+      if (!L.gone){ eggs.push({ x:(L.a.x + L.b.x) / 2, y:(L.a.y + L.b.y) / 2, vy:16, rest:sandTop() - 8 - rand(0, 30), t:0, hatch:24, ph:rand(0, 6), s1:L.a.base, s2:L.b.base, pa:parentInfo(L.a), pb:parentInfo(L.b) });
         sparkle((L.a.x + L.b.x) / 2, (L.a.y + L.b.y) / 2, 10); toast(`${L.a.name} et ${L.b.name} ont pondu un œuf !`); }
       L.done = true;
     }
@@ -2658,7 +2680,7 @@ function rewardTrick(c){ if (Date.now() - (c.cd.trickR || 0) > 30000){ c.cd.tric
 function doShow(c){
   const list = (c.tricks || []).slice(); if (list.length < 2 || !cdOK(c, 'show', 60)) return; wakeCreature(c); closeModals();
   c.queue = list.slice(1); startAnim(c, list[0]); addLove(c, 2); bumpSt(c, 'tricks', list.length); snd('fanfare');
-  addCoins(list.length * 2); floatText(c.x, c.y - c.dh * .9, '+' + list.length * 2); logc(c, `A donné un spectacle de ${list.length} tours.`); toast(`${c.name} donne un spectacle !`);
+  addCoins(list.length * 2); floatText(c.x, c.y - c.dh * .9, '+' + list.length * 2); logc(c, `A donné un spectacle de ${list.length} tours.`); toast(`${c.name} donne un spectacle !`); sagaShow(c, list);
 }
 
 /* ---------- lancer ---------- */
@@ -2835,11 +2857,13 @@ function sirenAura(){
 /* ---------- cadeaux de saison ---------- */
 let presents = [], presentClock = 20;
 function lifePointer(x, y){
+  if (sagaPointer(x, y)) return true;
   for (const l of lanterns){ if (!l.dead && Math.hypot(x - l.x, y - l.y) < 34 + (COARSE ? 14 : 0)){ l.dead = true; addCoins(3); sparkle(l.x, l.y, 12); floatText(l.x, l.y - 14, '+3'); snd('pop'); if (Math.random() < .2){ const g = pickOne(GIFTS); addGift(g.id); toast(`La lanterne contenait : ${g.n.toLowerCase()} !`); } return true; } }
   for (const p of presents){ if (!p.dead && Math.hypot(x - p.x, y - p.y) < 36 + (COARSE ? 14 : 0)){ p.dead = true; const g = pickOne(GIFTS); addGift(g.id); sparkle(p.x, p.y, 16); confetti(p.x, p.y, 14); snd('gift'); toast(`Cadeau de Noël : ${g.n.toLowerCase()} !`); return true; } }
   return false;
 }
 function lifeUpdate(dt){
+  sagaUpdate(dt);
   for (const c of creatures){ if (c.animal) sleepTick(c, dt); }
   // décors qui réagissent aux nageurs
   const sw = creatures.filter(o => !o.anchored && !o.leaving);
@@ -2859,6 +2883,7 @@ function lifeUpdate(dt){
 }
 let lifeClock = 1;
 function drawLife(phase){
+  sagaDraw(phase);
   if (phase !== 'front') return;
   for (const k of inkClouds){ const u = k.t / 3.2, r = 40 + u * 130 * unit, a = (1 - u) * .8; const g = ctx.createRadialGradient(k.x, k.y, 0, k.x, k.y, r); g.addColorStop(0, `rgba(10,4,20,${a})`); g.addColorStop(1, 'rgba(10,4,20,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(k.x, k.y, r, 0, TAU); ctx.fill(); }
   for (const p of presents){
@@ -2906,6 +2931,387 @@ $('#btnCodePaste').addEventListener('click', async () => {
     await applyState(data); lists(); uiSettings(); uiCoins(); refreshUI(); save(); closeModals(); toast('Aquarium restauré !');
   } catch (e) { toast('Aucun code valide dans le presse-papiers.'); }
 });
+
+</script>
+<script>
+/* ============ Saga : rituels, hybrides, profondeur, histoire, jury, fouille, bestiaire ============ */
+const SAGA_DEF = () => ({ depth: 0, lore: [], rit: {}, best: {}, maps: [], digE: 3, treasures: 0, juryShows: 0, bestShow: 0, bm: [] });
+function saga(){
+  const s = state.saga && typeof state.saga === 'object' ? state.saga : (state.saga = SAGA_DEF());
+  if (!Array.isArray(s.lore)) s.lore = []; if (!Array.isArray(s.maps)) s.maps = []; if (!Array.isArray(s.bm)) s.bm = [];
+  if (!s.rit || typeof s.rit !== 'object') s.rit = {}; if (!s.best || typeof s.best !== 'object') s.best = {};
+  if (!Number.isFinite(s.digE)) s.digE = 3; s.depth = clamp(s.depth | 0, 0, 3);
+  return s;
+}
+const sagaMul = c => (1 + .1 * (state.saga ? clamp(state.saga.depth | 0, 0, 3) : 0)) * ((c && c.hy && c.hy.mut) ? (c.hy.mut === 'lunaire' ? 1.5 : 1.25) : 1);
+let sagaT = 0;
+
+/* ---------- Histoire (fragments du journal du Gardien) ---------- */
+const LORE = [
+  { id: 'l1', t: 'Le premier trait', x: 'On raconte que l’abîme ne possède aucune forme à lui. Il attend qu’une main en dessine une, puis il la regarde vivre.' },
+  { id: 'l2', t: 'Journal du Gardien, I', x: 'J’ai tracé un poisson avec du charbon. Il a nagé. Je n’ai plus jamais douté.' },
+  { id: 'l3', t: 'Ce que mangent les ombres', x: 'Elles ne se nourrissent pas que de miettes : elles mangent l’attention. Chaque regard les rend plus lourdes, plus réelles.' },
+  { id: 'l4', t: 'Les sceaux', x: 'Une bougie, un os, une fleur noire. Les anciens savaient que l’ordre des choses suffit à réveiller ce qui dort.' },
+  { id: 'l5', t: 'Le Jury', x: 'Trois silhouettes siègent parfois, capuchon bas. On dit qu’elles furent des artistes que nul n’applaudit. Elles notent chaque tour avec une sévérité tendre.' },
+  { id: 'l6', t: 'Les cartes', x: 'Le sable garde ce que la mer rend. Une croix tracée à la hâte vaut plus qu’une couronne.' },
+  { id: 'l7', t: 'Le Kraken', x: 'Il n’est pas un monstre. Il est une question restée sans réponse, et il cherche qui oserait la poser.' },
+  { id: 'l8', t: 'Les mélanges', x: 'Quand deux dessins se rencontrent, l’abîme les mêle et retient son souffle. Aucun enfant ne ressemble à ses parents, et tous leur ressemblent.' },
+  { id: 'l9', t: 'Journal du Gardien, II', x: 'Je descends. Plus bas, les couleurs se taisent et les formes parlent. Si tu lis ceci, tu es déjà plus profond que moi.' },
+  { id: 'l10', t: 'L’abîme dessiné', x: 'Et si l’abîme n’était qu’un grand dessin que personne n’a fini ? Continue de tracer. Il ne demande rien d’autre.' }
+];
+function grantLore(){
+  const s = saga(), next = LORE.find(l => !s.lore.includes(l.id)); if (!next) return false;
+  s.lore.push(next.id); toast(`Fragment découvert : « ${next.t} » (Grimoire › Histoire)`); snd('chime'); saveSoon(); return true;
+}
+
+/* ---------- Bestiaire ---------- */
+const EVT_LABELS = { moon: 'Lune de sang', fog: 'Brume', storm: 'Tempête', kraken: 'Kraken', pirates: 'Pirates', client: 'Client mystérieux', school: 'Banc silencieux', chest: 'Coffre maudit', manna: 'Pluie de nourriture', jury: 'Jury des Ombres' };
+function bestiaryDefs(){
+  return [
+    { g: 'Couleurs', items: COLOR_LIST.concat(['grise']).map(c => ['col:' + c, c.charAt(0).toUpperCase() + c.slice(1)]) },
+    { g: 'Formes', items: [['type:fish', 'Créature'], ['type:jelly', 'Méduse'], ['type:sub', 'Spectre'], ['type:plant', 'Plante'], ['type:decor', 'Décor']] },
+    { g: 'Stades', items: STAGES.map((s, i) => ['lvl:' + i, s]) },
+    { g: 'Caractères', items: Object.keys(PERS).map(k => ['pers:' + k, PERS[k]]) },
+    { g: 'Mutations', items: [['mut:lunaire', 'Lunaire'], ['mut:ebene', 'Ébène'], ['mut:sanguine', 'Sanguine']] },
+    { g: 'Visiteurs', items: Object.keys(VIS).map(k => ['vis:' + k, VIS[k].label.replace(/^une? /, '').replace(/^./, m => m.toUpperCase())]) },
+    { g: 'Événements', items: Object.keys(EVT_LABELS).map(k => ['evt:' + k, EVT_LABELS[k]]) },
+    { g: 'Tours', items: Object.keys(TRICKS).map(k => ['trick:' + k, TRICKS[k]]) },
+    { g: 'Rituels', items: RITUALS.map(r => ['rit:' + r.id, r.n]) }
+  ];
+}
+function bestiaryStats(){
+  const s = saga(); let tot = 0, got = 0; for (const G of bestiaryDefs()) for (const [k] of G.items){ tot++; if (s.best[k]) got++; }
+  return { tot, got, pct: tot ? Math.round(got / tot * 100) : 0 };
+}
+function sagaSeen(k){ const s = saga(); if (!s.best[k]){ s.best[k] = 1; saveSoon(); return true; } return false; }
+function sagaScan(){
+  for (const c of creatures){
+    sagaSeen('type:' + c.type);
+    if (c.animal){
+      for (let i = 0; i <= c.level; i++) sagaSeen('lvl:' + i);
+      if (c.pers) sagaSeen('pers:' + c.pers);
+      if (c.type === 'fish' || c.type === 'jelly') { try { sagaSeen('col:' + colorName(c)); } catch (e) {} }
+      for (const t of (c.tricks || [])) sagaSeen('trick:' + t);
+      if (c.hy && c.hy.mut) sagaSeen('mut:' + c.hy.mut);
+    }
+  }
+  for (const v of visitors) sagaSeen('vis:' + v.kind);
+  const b = bestiaryStats(), s = saga();
+  [[25, 40], [50, 90], [75, 160], [100, 300]].forEach(([p, gain]) => {
+    if (b.pct >= p && !s.bm.includes(p)){ s.bm.push(p); addCoins(gain); toast(`Bestiaire à ${p} % : +${gain} perles !`); snd('fanfare'); if (p === 50 || p === 100) grantLore(); }
+  });
+}
+
+/* ---------- Rituels ---------- */
+const RITUALS = [
+  { id: 'veillee', n: 'La Veillée', need: ['Candélabre', 'Crâne', 'Rose noire'], hint: 'Une flamme funèbre, un visage d’os, une fleur sans lumière.', out: 'Une pluie de perles noires et la tendresse de tous.' },
+  { id: 'ossuaire', n: 'Le Cercle d’Os', need: ['Corail d’os', 'Crâne', 'Croix de pierre'], hint: 'Des os, des os et de la pierre bénite : ce qui reste après la chair.', out: 'Une procession de fantômes.' },
+  { id: 'messe', n: 'La Messe Engloutie', need: ['Chapelle engloutie', 'Candélabre', 'Croix de pierre'], hint: 'Un lieu saint noyé, sa lumière, sa croix.', out: 'Tous tes habitants grandissent et s’apaisent.' },
+  { id: 'offrande', n: 'L’Offrande à l’Abîme', need: ['Ancre rouillée', 'Épave', 'Crâne'], hint: 'Ce que la mer a pris : une ancre, une coque, un visage.', out: 'Un coffre maudit et une carte au trésor.' },
+  { id: 'jardin', n: 'Le Jardin Noir', need: ['Rose noire', 'Algue noire', 'Anémone vénéneuse'], hint: 'Tout ce qui pousse dans l’ombre, réuni en un même lit.', out: 'Un œuf hybride apparaît (il faut 2 créatures).' },
+  { id: 'ames', n: 'La Prison des Âmes', need: ['Cage à oiseau', 'Croix de pierre', 'Candélabre'], hint: 'Une cage, une croix, une flamme : qui est enfermé ?', out: 'Deux cadeaux pour tes créatures.' }
+];
+const RIT_CD = 8 * 60 * 1000;
+let seals = [], sealClock = 0, ritPerf = null, announced = new Set();
+function findSeals(){
+  const decors = creatures.filter(c => c.anchored && c.type === 'decor' && !c.leaving), out = [], R = clamp(W * .5, 260, 560);
+  for (const r of RITUALS){
+    const last = (saga().rit[r.id] || {}).last || 0; if (Date.now() - last < RIT_CD) continue;
+    const lists = r.need.map(n => decors.filter(d => d.name === n)); if (lists.some(l => !l.length)) continue;
+    let best = null, bd = 1e9;
+    for (const a of lists[0]) for (const b of lists[1]) for (const c of lists[2]){
+      const m = Math.max(Math.hypot(a.x - b.x, a.y - b.y), Math.hypot(a.x - c.x, a.y - c.y), Math.hypot(b.x - c.x, b.y - c.y));
+      if (m < bd){ bd = m; best = [a, b, c]; }
+    }
+    if (best && bd <= R){
+      const cx = (best[0].x + best[1].x + best[2].x) / 3, cy = clamp(best.reduce((a, d) => a + d.y - d.dh * .5, 0) / 3, 90, Math.max(100, H - 120));
+      out.push({ id: r.id, x: cx, y: cy, r: clamp(bd / 2 + 38 * unit, 70, 150) });
+    }
+  }
+  return out;
+}
+function drawSeal(s, a){
+  ctx.save(); ctx.translate(s.x, s.y); ctx.scale(1, .82); ctx.globalAlpha = a; const pu = .65 + .35 * Math.sin(T0 * 2.4 + s.x);
+  const gr = ctx.createRadialGradient(0, 0, s.r * .1, 0, 0, s.r * 1.25); gr.addColorStop(0, `rgba(190,120,255,${.35 * pu})`); gr.addColorStop(1, 'rgba(120,40,200,0)');
+  ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(0, 0, s.r * 1.25, 0, TAU); ctx.fill();
+  ctx.lineWidth = 3.2; ctx.strokeStyle = `rgba(230,205,255,${.55 + .3 * pu})`; ctx.beginPath(); ctx.arc(0, 0, s.r, 0, TAU); ctx.stroke();
+  ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(0, 0, s.r * .82, 0, TAU); ctx.stroke();
+  ctx.rotate(T0 * .25);
+  for (let i = 0; i < 12; i++){ const an = i / 12 * TAU, rr = s.r * .91; ctx.save(); ctx.translate(Math.cos(an) * rr, Math.sin(an) * rr); ctx.rotate(an + Math.PI / 2); ctx.beginPath(); ctx.moveTo(0, -7); ctx.lineTo(0, 7); if (i % 3 === 0){ ctx.moveTo(-5, -2); ctx.lineTo(5, -2); } else if (i % 3 === 1){ ctx.moveTo(-4, 4); ctx.lineTo(0, 0); ctx.lineTo(4, 4); } ctx.stroke(); ctx.restore(); }
+  ctx.beginPath(); for (let i = 0; i < 5; i++){ const an = -Math.PI / 2 + i * TAU * 2 / 5; ctx.lineTo(Math.cos(an) * s.r * .7, Math.sin(an) * s.r * .7); } ctx.closePath(); ctx.stroke();
+  ctx.restore();
+}
+function startRitual(s){
+  if (ritPerf) return true;
+  ritPerf = { id: s.id, x: s.x, y: s.y, r: s.r, t: 0 }; snd('rumble'); toast(RITUALS.find(r => r.id === s.id).n + '…'); return true;
+}
+function finishRitual(p){
+  const r = RITUALS.find(x => x.id === p.id), S = saga(), first = !(S.rit[r.id] && S.rit[r.id].n);
+  S.rit[r.id] = { n: ((S.rit[r.id] || {}).n || 0) + 1, last: Date.now() }; sagaSeen('rit:' + r.id); bump('rituals');
+  sparkle(p.x, p.y, 40); confetti(p.x, p.y - 20, 16); snd('fanfare');
+  const animals = creatures.filter(c => c.animal && !c.leaving);
+  if (r.id === 'veillee'){
+    for (let i = 0; i < 8; i++) pickups.push({ x: p.x + rand(-70, 70), y: p.y - rand(40, 90), vy: rand(24, 44), v: 3 + ((Math.random() * 3) | 0), rest: sandTop() + 8 + Math.random() * sandH * .35, life: 40, ph: Math.random() * 6, dead: false });
+    animals.forEach(c => addLove(c, 3)); toast('La Veillée : des perles noires pleuvent, et tes créatures s’attendrissent.');
+  } else if (r.id === 'ossuaire'){
+    for (let i = 0; i < 8; i++){ const gv = spawnVisitor('ghost'); gv.x -= gv.dir * i * 46; gv.by += rand(-70, 70); }
+    snd('wisp'); toast('Le Cercle d’Os : une procession de fantômes traverse l’aquarium.');
+  } else if (r.id === 'messe'){
+    animals.forEach(c => { gainXp(c, 2); c.hunger = Math.max(0, c.hunger - .3); c.fear = 0; addLove(c, 3); sparkle(c.x, c.y, 8); }); toast('La Messe Engloutie : tes habitants grandissent et s’apaisent.');
+  } else if (r.id === 'offrande'){
+    if (!chest) spawnChest(); addMap(true); toast('L’Offrande à l’Abîme : un coffre émerge, et une carte se dessine dans le sable.');
+  } else if (r.id === 'jardin'){
+    const fish = animals.filter(c => c.type === 'fish');
+    if (fish.length >= 2 && eggs.length < 4 && residentCount() < maxResidents()){ const a = pickOne(fish), b = pickOne(fish.filter(f => f !== a)); eggs.push({ x: p.x, y: p.y - 50, vy: 16, rest: sandTop() - 8 - rand(0, 30), t: 0, hatch: 18, ph: rand(0, 6), s1: a.base, s2: b.base, pa: parentInfo(a), pb: parentInfo(b), boost: true }); toast('Le Jardin Noir : un œuf hybride éclot de l’ombre.'); }
+    else { addCoins(30); floatText(p.x, p.y - 30, '+30'); toast('Le Jardin Noir attend deux créatures pour donner la vie : il t’offre 30 perles.'); }
+  } else if (r.id === 'ames'){
+    const g1 = pickOne(GIFTS), g2 = pickOne(GIFTS); addGift(g1.id); addGift(g2.id); toast(`La Prison des Âmes libère : ${g1.n.toLowerCase()} et ${g2.n.toLowerCase()}.`);
+  }
+  if (first) setTimeout(grantLore, 1400);
+  seals = []; sealClock = 0; saveSoon();
+}
+
+/* ---------- Hybrides ---------- */
+function parentInfo(c){ return { n: c.name, p: c.pers, l: c.likes ? c.likes.slice() : null, h: c.hates ? c.hates.slice() : null }; }
+function hybridName(a, b){
+  const x = String(a || 'Ombre'), y = String(b || 'Brume'), n = x.slice(0, Math.ceil(x.length / 2)) + y.slice(Math.floor(y.length / 2)).toLowerCase();
+  return (n.length > 2 ? n : pickOne(NAMES)).slice(0, 18);
+}
+function hybridSprite(a, b, mut){
+  const H = 220, wa = a.width / a.height * H, wb = b.width / b.height * H, Wc = Math.round(clamp((wa + wb) / 2, 120, 420));
+  const out = document.createElement('canvas'); out.width = Wc; out.height = H; const g = out.getContext('2d', { willReadFrequently: true }); g.imageSmoothingQuality = 'high';
+  const part = (src, front) => {
+    const c = document.createElement('canvas'); c.width = Wc; c.height = H; const f = c.getContext('2d'); f.drawImage(src, 0, 0, Wc, H); f.globalCompositeOperation = 'destination-in';
+    const gr = front ? f.createLinearGradient(Wc * .44, 0, Wc * .62, 0) : f.createLinearGradient(Wc * .38, 0, Wc * .56, 0);
+    gr.addColorStop(0, front ? 'rgba(0,0,0,0)' : 'rgba(0,0,0,1)'); gr.addColorStop(1, front ? 'rgba(0,0,0,1)' : 'rgba(0,0,0,0)'); f.fillStyle = gr; f.fillRect(0, 0, Wc, H); return c;
+  };
+  g.drawImage(part(b, false), 0, 0); g.drawImage(part(a, true), 0, 0);
+  g.globalCompositeOperation = 'source-atop';
+  if (mut === 'lunaire'){ g.fillStyle = 'rgba(205,222,255,.5)'; g.fillRect(0, 0, Wc, H); }
+  else if (mut === 'ebene'){ g.fillStyle = 'rgba(8,4,18,.62)'; g.fillRect(0, 0, Wc, H); }
+  else if (mut === 'sanguine'){ g.fillStyle = 'rgba(175,10,45,.5)'; g.fillRect(0, 0, Wc, H); }
+  g.globalCompositeOperation = 'source-over';
+  const sp = spriteFrom(out) || out;
+  return mut ? sp : hueShift(sp, (Math.random() < .5 ? -1 : 1) * rand(10, 40));
+}
+function hatchHybrid(e){
+  if (!e.pa || !e.pb || !e.s1 || !e.s2) return false;
+  try { makeHybrid(e); return true; } catch (err) { return false; }
+}
+function makeHybrid(e){
+  const headA = Math.random() < .5, A = headA ? e.s1 : e.s2, B = headA ? e.s2 : e.s1, pa = headA ? e.pa : e.pb, pb = headA ? e.pb : e.pa;
+  const mut = Math.random() < (e.boost ? .3 : .14) ? pickOne(['lunaire', 'ebene', 'sanguine']) : null;
+  const sprite = hybridSprite(A, B, mut), p = Math.random() < .7 ? pa : pb;
+  const likes = [pa.l && pa.l[0], pb.l && pb.l[0]].filter(Boolean), hates = [(Math.random() < .5 ? pa.h : pb.h) || []].flat().slice(0, 1);
+  const c = addCreature({ type: 'fish', name: hybridName(pa.n, pb.n), sprite, xp: mut === 'ebene' ? LV_XP[1] : 0, born: Date.now(), pers: p.p, likes: likes.length === 2 && likes[0] !== likes[1] ? likes : null, hates: hates.length ? hates : null, love: mut === 'sanguine' ? 45 : 15, hy: { a: pa.n, b: pb.n, mut } });
+  c.x = e.x; c.y = e.y; c.tx = c.x; c.ty = c.y; c.cool = Date.now() + 180000;
+  logc(c, `Née de ${pa.n} et ${pb.n}${mut ? ' · mutation ' + { lunaire: 'lunaire', ebene: 'd’ébène', sanguine: 'sanguine' }[mut] : ''}.`);
+  sparkle(c.x, c.y, mut ? 34 : 18); snd(mut ? 'fanfare' : 'sparkle'); bump('hatched'); bump('hybrids'); sagaSeen('hyb:1'); if (mut) sagaSeen('mut:' + mut);
+  toast(mut ? `Mutation ${mut} ! ${c.name} est un hybride rare.` : `Un œuf a éclos : voici ${c.name}, mélange de ${pa.n} et ${pb.n} !`);
+  return c;
+}
+
+/* ---------- Cartes au trésor et fouille du sable ---------- */
+function addMap(force){
+  const s = saga(); if (s.maps.length >= 2 && !force) return false; if (s.maps.length >= 3) s.maps.shift();
+  s.maps.push({ x: +rand(.12, .88).toFixed(3), y: +rand(.15, .85).toFixed(3) }); saveSoon(); snd('chime'); return true;
+}
+const mapPos = m => ({ x: m.x * W, y: sandTop() + m.y * sandH });
+let digFx = [];
+function sagaDig(x, y){
+  const s = saga();
+  if (s.digE < 1){ toast('Le sable est trop dur pour l’instant… reviens dans un moment.'); return true; }
+  s.digE -= 1; digFx.push({ x, y, t: 0 }); for (let i = 0; i < 8; i++) fx.push({ k: 's', x, y, vx: rand(-70, 70), vy: rand(-110, -30), life: rand(.4, .8), max: .8, r: rand(2, 4) }); snd('pop');
+  const rad = 38 * unit + 12 + (COARSE ? 14 : 0), hitMap = s.maps.findIndex(m => { const p = mapPos(m); return Math.hypot(p.x - x, p.y - y) < rad; });
+  const left = Math.floor(s.digE);
+  if (hitMap >= 0){
+    s.maps.splice(hitMap, 1); s.treasures++; const gain = 60 + ((Math.random() * 60) | 0); addCoins(gain); const g = pickOne(GIFTS); addGift(g.id);
+    sparkle(x, y, 36); confetti(x, y - 10, 24); snd('fanfare'); floatText(x, y - 20, '+' + gain);
+    toast(`Trésor déterré : ${gain} perles et ${g.n.toLowerCase()} !`); grantLore(); sagaSeen('dig:1'); bump('treasures'); saveSoon(); return true;
+  }
+  const r = Math.random();
+  if (r < .38) toast(`Rien que du sable… (${left} coup${left > 1 ? 's' : ''} de pelle restant${left > 1 ? 's' : ''})`);
+  else if (r < .68){ const g = 2 + ((Math.random() * 7) | 0); addCoins(g); floatText(x, y - 14, '+' + g); snd('coin'); toast(`Quelques perles enfouies : +${g}`); }
+  else if (r < .82){ const gf = pickOne(GIFTS); addGift(gf.id); sparkle(x, y, 14); snd('gift'); toast(`Tu déterres : ${gf.n.toLowerCase()} !`); }
+  else if (r < .92){ if (addMap()) toast('Un parchemin rongé : une carte au trésor ! Une croix dorée marque le sable.'); else toast('Un vieux parchemin, mais tu as déjà tes cartes.'); }
+  else { if (!grantLore()){ addCoins(10); toast('Un vieux parchemin illisible : +10 perles.'); } }
+  saveSoon(); return true;
+}
+
+/* ---------- Profondeur ---------- */
+const DEPTHS = [
+  { n: 'Les Eaux Troubles', sub: 'Là où tout commence.' },
+  { n: 'Le Gouffre', sub: 'La lumière s’y noie. Les perles y brillent plus.', goals: [['res', 5, 'Avoir 5 habitants'], ['love', 50, 'Une créature à 50 d’affection'], ['rit', 1, 'Réussir 1 rituel']], reward: 80 },
+  { n: 'La Fosse des Spectres', sub: 'Les ombres y répondent quand on les appelle.', goals: [['res', 9, 'Avoir 9 habitants'], ['hyb', 1, 'Faire éclore 1 hybride'], ['rit', 3, 'Réussir 3 rituels différents'], ['show', 1, 'Un spectacle devant le jury']], reward: 160 },
+  { n: 'Le Cœur de l’Abîme', sub: 'Il bat, très lentement, au rythme de tes dessins.', goals: [['lvl', 4, 'Une créature au stade Maudit'], ['rit', 6, 'Réussir les 6 rituels'], ['best', 50, 'Bestiaire à 50 %'], ['dig', 1, 'Déterrer un trésor']], reward: 400 }
+];
+function goalValue(k){
+  const s = saga();
+  if (k === 'res') return residentCount();
+  if (k === 'love') return Math.max(0, ...creatures.filter(c => c.animal).map(c => Math.floor(c.love)));
+  if (k === 'rit') return Object.keys(s.rit).filter(i => s.rit[i] && s.rit[i].n).length;
+  if (k === 'hyb') return stats.hybrids || 0;
+  if (k === 'show') return s.juryShows;
+  if (k === 'lvl') return Math.max(stats.maxLevel || 0, ...creatures.filter(c => c.animal).map(c => c.level));
+  if (k === 'best') return bestiaryStats().pct;
+  if (k === 'dig') return s.treasures;
+  return 0;
+}
+let depthFlash = 0;
+function depthCheck(){
+  const s = saga(), nx = DEPTHS[s.depth + 1]; if (!nx) return;
+  if (nx.goals.every(([k, n]) => goalValue(k) >= n)){
+    s.depth++; addCoins(nx.reward); depthFlash = 3; snd('rumble'); setTimeout(() => snd('fanfare'), 500);
+    toast(`Tu descends : ${nx.n} ! +${nx.reward} perles, et tes créatures rapportent plus.`); sparkle(W / 2, H / 2, 40); setTimeout(grantLore, 1600); saveSoon();
+  }
+}
+
+/* ---------- Jury des Ombres ---------- */
+let jury = null, juryNext = 480 + Math.random() * 240;
+function juryScore(c, list){
+  const distinct = new Set(list).size, base = 3 + list.length + Math.min(2, Math.floor(c.love / 50)) + (c.level >= 2 ? 1 : 0) + (distinct === list.length ? 1 : 0);
+  return [0, 1, 2].map(() => clamp(Math.round(base + rand(-1.2, 1.6)), 1, 10));
+}
+function sagaShow(c, list){
+  const s = saga(); if (!jury || jury.judged) return;
+  jury.judged = true; jury.scores = juryScore(c, list); jury.shown = 0; jury.by = c.name;
+  jury.revealAt = list.reduce((a, t) => a + (TRICK_DUR[t] || 1.2), 0) + .9; jury.clock = 0; s.juryShows++; saveSoon();
+}
+function juryUpdate(dt){
+  if (!jury){
+    if (sagaT > juryNext && stats.play > 300){
+      if (creatures.some(c => c.animal && (c.tricks || []).length >= 2)){ jury = { t: 0, dur: 150, judged: false, fade: 0, scores: null, shown: 0, leave: false }; toast('Le Jury des Ombres s’est installé. Fais donner un spectacle !'); snd('chime'); sagaSeen('evt:jury'); }
+      juryNext = sagaT + rand(1500, 2400);
+    }
+    return;
+  }
+  jury.t += dt; jury.fade = clamp(jury.fade + (jury.leave ? -dt : dt) * .8, 0, 1);
+  if (jury.judged){
+    jury.clock += dt;
+    if (jury.clock > jury.revealAt){
+      const k = Math.floor((jury.clock - jury.revealAt) / .7) + 1;
+      if (k > jury.shown && jury.shown < 3){ jury.shown++; snd('chime'); }
+      if (jury.shown >= 3 && !jury.paid && jury.clock > jury.revealAt + 2.6){
+        jury.paid = true; const tot = jury.scores.reduce((a, b) => a + b, 0), gain = tot * 2, S = saga(); addCoins(gain); S.bestShow = Math.max(S.bestShow, tot);
+        floatText(W / 2, H * .3, '+' + gain); confetti(W / 2, H * .2, 20); snd('fanfare');
+        toast(tot >= 27 ? `Ovation du jury : ${tot}/30 ! +${gain} perles et le titre « Étoile du Grand Guignol ».` : `Le jury donne ${tot}/30 à ${jury.by} : +${gain} perles.`);
+        if (tot >= 24 && S.maps.length < 2) addMap(); if (S.juryShows === 1) grantLore(); jury.leaveAt = jury.clock + 4;
+      }
+      if (jury.leaveAt && jury.clock > jury.leaveAt) jury.leave = true;
+    }
+  }
+  if (!jury.judged && jury.t > jury.dur) jury.leave = true;
+  if (jury.leave && jury.fade <= 0) jury = null;
+}
+function drawJury(){
+  if (!jury) return; const gap = Math.min(150 * unit, W * .19), s = 30 * unit + 10;
+  for (let i = 0; i < 3; i++){
+    const x = W / 2 + (i - 1) * gap, y = H * .14 + Math.sin(T0 * .9 + i * 2) * 5;
+    ctx.save(); ctx.globalAlpha = jury.fade; ctx.translate(x, y);
+    const gl = ctx.createRadialGradient(0, 0, 0, 0, 0, s * 2); gl.addColorStop(0, 'rgba(150,90,255,.35)'); gl.addColorStop(1, 'rgba(150,90,255,0)'); ctx.fillStyle = gl; ctx.beginPath(); ctx.arc(0, 0, s * 2, 0, TAU); ctx.fill();
+    ctx.fillStyle = '#150a24'; ctx.strokeStyle = 'rgba(190,150,255,.75)'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(-s * .8, s * 1.2); ctx.quadraticCurveTo(-s * 1.0, -s * .1, -s * .4, -s * .9); ctx.quadraticCurveTo(0, -s * 1.35, s * .4, -s * .9); ctx.quadraticCurveTo(s * 1.0, -s * .1, s * .8, s * 1.2);
+    for (let k = 0; k < 4; k++) ctx.lineTo(s * .8 - (k + .5) * s * .4, s * 1.2 + (k % 2 ? 0 : s * .22)); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#05030a'; ctx.beginPath(); ctx.ellipse(0, -s * .15, s * .42, s * .5, 0, 0, TAU); ctx.fill();
+    ctx.fillStyle = '#ffe27a'; ctx.shadowColor = '#ffd24d'; ctx.shadowBlur = 8; ctx.beginPath(); ctx.arc(-s * .17, -s * .2, s * .07, 0, TAU); ctx.arc(s * .17, -s * .2, s * .07, 0, TAU); ctx.fill(); ctx.shadowBlur = 0;
+    if (jury.judged && jury.scores && i < jury.shown){
+      const w = s * 1.15, h = s * 1.45, y0 = s * 1.45; ctx.fillStyle = '#f3ead3'; ctx.strokeStyle = '#05030a'; ctx.lineWidth = 2.4; ctx.fillRect(-w / 2, y0, w, h); ctx.strokeRect(-w / 2, y0, w, h);
+      ctx.fillStyle = jury.scores[i] >= 8 ? '#a31630' : '#3a2a52'; ctx.font = `700 ${Math.round(s * .95)}px Cinzel, serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(String(jury.scores[i]), 0, y0 + h / 2 + 1);
+    }
+    ctx.restore();
+  }
+}
+
+/* ---------- Mise à jour, dessin, pointeur ---------- */
+let scanClock = 0, depthClock = 0;
+function sagaUpdate(dt){
+  sagaT += dt; const s = saga();
+  s.digE = Math.min(3, s.digE + dt / 45);
+  sealClock -= dt;
+  if (sealClock <= 0 && !ritPerf){
+    sealClock = .6; seals = findSeals();
+    for (const sl of seals) if (!announced.has(sl.id)){ announced.add(sl.id); toast('Un sceau s’embrase entre tes décors… touche-le.'); snd('wisp'); }
+  }
+  if (ritPerf){ ritPerf.t += dt; if (Math.random() < dt * 14) bubble(ritPerf.x + rand(-ritPerf.r, ritPerf.r), ritPerf.y, rand(2, 5), rand(60, 120)); if (ritPerf.t >= 2.8){ const p = ritPerf; ritPerf = null; finishRitual(p); } }
+  scanClock -= dt; if (scanClock <= 0){ scanClock = 2; sagaScan(); }
+  depthClock -= dt; if (depthClock <= 0){ depthClock = 3; depthCheck(); }
+  for (const m of s.maps){ if (Math.random() < dt * .8){ const p = mapPos(m); fx.push({ k: 's', x: p.x + rand(-8, 8), y: p.y + rand(-6, 6), vx: 0, vy: -20, life: .8, max: .8, r: rand(2, 4) }); } }
+  for (const d of digFx) d.t += dt; digFx = digFx.filter(d => d.t < 1.6);
+  if (depthFlash > 0) depthFlash = Math.max(0, depthFlash - dt);
+  juryUpdate(dt);
+}
+function sagaPointer(x, y){
+  if (ritPerf) return true;
+  for (const s of seals){ const dx = (x - s.x) / (s.r * 1.1), dy = (y - s.y) / (s.r * .9); if (dx * dx + dy * dy < 1) return startRitual(s); }
+  if (y > sandTop() + 6 && typeof selected !== 'undefined' && !selected && !(typeof hit === 'function' && hit(x, y))) return sagaDig(x, y);
+  return false;
+}
+function sagaDraw(phase){
+  if (phase === 'back'){
+    for (const s of seals) drawSeal(s, 1);
+    if (ritPerf){ const u = ritPerf.t / 2.8; drawSeal({ x: ritPerf.x, y: ritPerf.y, r: ritPerf.r * (1 + u * .35) }, 1); }
+    const S = saga();
+    for (const m of S.maps){ const p = mapPos(m), pu = .6 + .4 * Math.sin(T0 * 3 + p.x); ctx.save(); ctx.translate(p.x, p.y); ctx.lineCap = 'round'; ctx.strokeStyle = `rgba(255,215,110,${.5 + .4 * pu})`; ctx.shadowColor = '#ffcf5a'; ctx.shadowBlur = 8; ctx.lineWidth = 4; const k = 9 * unit + 4; ctx.beginPath(); ctx.moveTo(-k, -k); ctx.lineTo(k, k); ctx.moveTo(k, -k); ctx.lineTo(-k, k); ctx.stroke(); ctx.restore(); }
+    for (const d of digFx){ const a = 1 - d.t / 1.6; ctx.save(); ctx.globalAlpha = a * .8; ctx.fillStyle = '#120c18'; ctx.beginPath(); ctx.ellipse(d.x, d.y + 3, 18 * unit + 6, 7 * unit + 3, 0, 0, TAU); ctx.fill(); ctx.restore(); }
+  } else if (phase === 'front'){
+    const S = saga();
+    if (ritPerf){ const u = ritPerf.t / 2.8; ctx.save(); ctx.globalAlpha = Math.sin(u * Math.PI) * .38; ctx.fillStyle = '#05010c'; ctx.fillRect(0, 0, W, H); ctx.restore(); }
+    drawJury();
+    if (S.depth > 0 || depthFlash > 0){
+      ctx.save(); const a = .09 * S.depth + (depthFlash > 0 ? Math.sin(Math.min(1, depthFlash / 3) * Math.PI) * .5 : 0), g = ctx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * .3, W / 2, H / 2, Math.max(W, H) * .75);
+      g.addColorStop(0, 'rgba(20,6,40,0)'); g.addColorStop(1, `rgba(8,2,20,${Math.min(.7, a * 2.2)})`); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H); ctx.restore();
+    }
+  }
+}
+
+/* ---------- Grimoire : onglets Rituels, Profondeur, Bestiaire, Histoire ---------- */
+let carnetTab = 'crea';
+const CARNET_TABS = [['crea', 'Créatures'], ['rit', 'Rituels'], ['dep', 'Profondeur'], ['bes', 'Bestiaire'], ['his', 'Histoire']];
+const mkEl = (tag, cls, txt) => { const e = document.createElement(tag); if (cls) e.className = cls; if (txt != null) e.textContent = txt; return e; };
+function carnetTabs(){
+  const t = $('#carnetTabs'); if (!t) return false; t.textContent = '';
+  CARNET_TABS.forEach(([k, n]) => { const b = mkEl('button', 'tab' + (k === carnetTab ? ' on' : ''), n); b.type = 'button'; b.addEventListener('click', () => { carnetTab = k; uiCarnet(); }); t.appendChild(b); });
+  const crea = carnetTab === 'crea'; $('#carnetIntro').hidden = !crea; $('#carnetList').hidden = !crea; $('#sagaBody').hidden = crea;
+  if (crea) return false;
+  $('#carnetEmpty').hidden = true; renderSagaPane(carnetTab); return true;
+}
+function bar(p){ const b = mkEl('div', 'sg-bar'), i = mkEl('i'); i.style.width = Math.round(clamp(p, 0, 1) * 100) + '%'; b.appendChild(i); return b; }
+function renderSagaPane(tab){
+  const root = $('#sagaBody'); root.textContent = ''; const s = saga();
+  if (tab === 'rit'){
+    root.appendChild(mkEl('p', 'sub sg-intro', 'Dispose trois décors côte à côte : un sceau s’embrase au sol. Touche-le pour accomplir le rituel.'));
+    for (const r of RITUALS){
+      const info = s.rit[r.id], done = info && info.n, card = mkEl('div', 'sg-card' + (done ? ' ok' : ''));
+      card.appendChild(mkEl('div', 'sg-h', done ? r.n : '???'));
+      card.appendChild(mkEl('div', 'sg-t', done ? r.need.join(' · ') : r.hint));
+      if (done){ card.appendChild(mkEl('div', 'sg-t', r.out)); const left = Math.max(0, RIT_CD - (Date.now() - info.last)); card.appendChild(mkEl('div', 'sg-m', `Accompli ${info.n} fois` + (left > 0 ? ` · le sceau se rallume dans ${Math.ceil(left / 60000)} min` : ' · prêt'))); }
+      root.appendChild(card);
+    }
+  } else if (tab === 'dep'){
+    const d = DEPTHS[s.depth], nx = DEPTHS[s.depth + 1];
+    const cur = mkEl('div', 'sg-card ok'); cur.appendChild(mkEl('div', 'sg-h', `Profondeur ${s.depth + 1} : ${d.n}`)); cur.appendChild(mkEl('div', 'sg-t', d.sub)); cur.appendChild(mkEl('div', 'sg-m', `Bonus de perles : +${s.depth * 10} %`)); root.appendChild(cur);
+    if (nx){
+      const card = mkEl('div', 'sg-card'); card.appendChild(mkEl('div', 'sg-h', `Prochaine : ${nx.n}`));
+      for (const [k, n, label] of nx.goals){ const v = Math.min(n, goalValue(k)); const row = mkEl('div', 'sg-goal'); row.appendChild(mkEl('span', v >= n ? 'sg-t done' : 'sg-t', `${v >= n ? '✓ ' : ''}${label}`)); row.appendChild(mkEl('span', 'sg-m', `${v}/${n}`)); card.appendChild(row); card.appendChild(bar(v / n)); }
+      card.appendChild(mkEl('div', 'sg-m', `Récompense : ${nx.reward} perles, un fragment d’histoire et +10 % de perles.`)); root.appendChild(card);
+    } else root.appendChild(mkEl('p', 'sub sg-intro', 'Tu as atteint le fond. Il te regarde, maintenant.'));
+    const ex = mkEl('div', 'sg-card'); ex.appendChild(mkEl('div', 'sg-h', 'Fouille du sable'));
+    ex.appendChild(mkEl('div', 'sg-t', 'Touche le sable de l’aquarium pour creuser. Une croix dorée marque l’emplacement d’un trésor : creuse dessus !'));
+    ex.appendChild(mkEl('div', 'sg-m', `Coups de pelle : ${Math.floor(s.digE)}/3 · cartes : ${s.maps.length} · trésors déterrés : ${s.treasures}`)); root.appendChild(ex);
+    const ttl = [['Étoile du Grand Guignol', s.bestShow >= 27], ['Éleveur d’Ombres', (stats.hybrids || 0) >= 3], ['Fossoyeur de Trésors', s.treasures >= 3], ['Maître des Rituels', Object.keys(s.rit).filter(i => s.rit[i] && s.rit[i].n).length >= RITUALS.length], ['Archiviste', s.lore.length >= LORE.length]];
+    const tc = mkEl('div', 'sg-card'); tc.appendChild(mkEl('div', 'sg-h', 'Titres'));
+    const ch = mkEl('div', 'sg-chips'); ttl.forEach(([n, ok]) => ch.appendChild(mkEl('span', 'sg-chip' + (ok ? ' on' : ''), ok ? n : '???'))); tc.appendChild(ch); root.appendChild(tc);
+  } else if (tab === 'bes'){
+    const b = bestiaryStats(); const top = mkEl('div', 'sg-card ok'); top.appendChild(mkEl('div', 'sg-h', `Bestiaire : ${b.got}/${b.tot} (${b.pct} %)`)); top.appendChild(bar(b.pct / 100)); top.appendChild(mkEl('div', 'sg-m', 'Paliers à 25, 50, 75 et 100 % : des perles, et des fragments d’histoire.')); root.appendChild(top);
+    for (const G of bestiaryDefs()){
+      const card = mkEl('div', 'sg-card'), got = G.items.filter(([k]) => s.best[k]).length; card.appendChild(mkEl('div', 'sg-h', `${G.g} ${got}/${G.items.length}`));
+      const ch = mkEl('div', 'sg-chips'); G.items.forEach(([k, n]) => ch.appendChild(mkEl('span', 'sg-chip' + (s.best[k] ? ' on' : ''), s.best[k] ? n : '?'))); card.appendChild(ch); root.appendChild(card);
+    }
+  } else if (tab === 'his'){
+    root.appendChild(mkEl('p', 'sub sg-intro', `Fragments du journal du Gardien : ${s.lore.length}/${LORE.length}. Trouve-les dans les coffres, les rituels, le sable, le jury et en descendant plus bas.`));
+    LORE.forEach((l, i) => { const ok = s.lore.includes(l.id), card = mkEl('div', 'sg-card' + (ok ? ' ok' : '')); card.appendChild(mkEl('div', 'sg-h', ok ? l.t : `Fragment ${i + 1}`)); card.appendChild(mkEl('div', ok ? 'sg-t sg-lore' : 'sg-t', ok ? l.x : 'Pas encore découvert.')); root.appendChild(card); });
+  }
+}
 
 </script>
 <script>
@@ -3749,6 +4155,7 @@ function renderShop(){
 function openCarnet(){ openModal('carnet'); uiCarnet(); }
 function uiCarnet(){
   if ($('#carnet').hidden) return;
+  if (carnetTabs()) return;
   const ul = $('#carnetList'); ul.textContent = '';
   $('#carnetEmpty').hidden = state.carnet.length > 0;
   for (const e of state.carnet){
