@@ -962,7 +962,7 @@ function update(dt){
     layout(c, dt);
     c.boost = Math.max(0, c.boost - dt); c.shake = Math.max(0, c.shake - dt * .8); c.beat = Math.max(0, c.beat - dt); c.joy = Math.max(0, c.joy - dt);
     if (c.anchored){ if (!c.drag) c.y = anchoredY(c); continue; }
-    c.face += (c.dir - c.face) * Math.min(1, dt * 5);
+    c.face += (c.dir - c.face) * Math.min(1, dt * 5); animTick(c, dt);
     if (c.animal) c.hunger = Math.min(1, c.hunger + dt / (c.pers === 'gourmand' ? 85 : 110));
     if (c.leaving){
       c.dir = c.leaveDir; c.x += c.leaveDir * 120 * unit * dt; c.y += Math.sin(T0 * 2 + c.phase) * 12 * dt; c.vx = c.leaveDir * 120; c.vy = 0; c.wag += dt * 9; c.pulseT += dt / 1.1;
@@ -1018,34 +1018,20 @@ function drawBody(c, now){
   ctx.save(); if (c.sch === 'hide') ctx.globalAlpha = .24;
   if (c.type === 'plant'){
     ctx.translate(c.x, c.y); ctx.scale(c.flip ? -s : s, s);
-    const sh = Math.max(2, Math.round(h / [90, 65, 45][perf.level])), amp = Math.max(6, w * .08) * (1 + c.shake * 2.2) * (.6 + flow() * 1.6);
-    for (let y0 = 0; y0 < h; y0 += sh){
-      const hh = Math.min(sh + .7, h - y0), v = 1 - (y0 + hh / 2) / h;
-      const dx = amp * Math.sin(T0 * 1.3 + v * 2.6 + c.phase) * Math.pow(v, 1.4);
-      ctx.drawImage(src, 0, y0, w, hh, -w / 2 + dx, y0 - h, w, hh);
-    }
+    swayStrips(src, w, h, Math.max(6, w * .08) * (1 + c.shake * 2.2) * (.6 + flow() * 1.6), c.phase);
   } else if (c.type === 'decor'){
     ctx.translate(c.x, c.y);
     if (c.name === 'Cage à oiseau'){ ctx.translate(0, -h * s); ctx.rotate(Math.sin(T0 * 2.4 + c.phase) * (.015 + .07 * (c.react || 0))); ctx.translate(0, h * s); }
-    ctx.scale(c.flip ? -s : s, s); ctx.drawImage(src, -w / 2, -h);
+    ctx.scale(c.flip ? -s : s, s);
+    const sway = SWAY_DECOR[c.name];
+    if (sway) swayStrips(src, w, h, Math.max(5, w * .07) * sway * (1 + c.shake * 2) * (.6 + flow() * 1.2), c.phase); else ctx.drawImage(src, -w / 2, -h);
   } else if (c.type === 'fish' || c.type === 'visitor'){
     const gs = 1 + (c.beat || 0) * .25;
     ctx.translate(c.x + (c.dx || 0), c.y + (c.dy || 0)); ctx.rotate(c.ang + (c.spinA || 0)); ctx.scale(c.face * s * gs, s * gs);
-    const sw = Math.max(2, Math.round(w / [90, 65, 45][perf.level])), amp = h * (c.type === 'visitor' ? .05 : .07) * (.45 + Math.min(1, Math.hypot(c.vx, c.vy) / 90));
-    for (let x0 = 0; x0 < w; x0 += sw){
-      const ww = Math.min(sw + .7, w - x0), tail = 1 - (x0 + ww / 2) / w;
-      const dy = amp * Math.sin(c.wag - tail * 3.2) * Math.pow(tail, 1.7);
-      ctx.drawImage(src, x0, 0, ww, h, -w / 2 + x0, -h / 2 + dy, ww, h);
-    }
+    animFish(c, src, w, h);
   } else if (c.type === 'jelly'){
-    const p = Math.sin(c.pulseT * TAU);
-    ctx.translate(c.x, c.y); ctx.rotate(c.ang); ctx.scale(s * (1 - .1 * p), s * (1 + .15 * p));
-    const sh = Math.max(2, Math.round(h / [90, 65, 45][perf.level])), amp = Math.max(5, w * .07);
-    for (let y0 = 0; y0 < h; y0 += sh){
-      const hh = Math.min(sh + .7, h - y0), v = (y0 + hh / 2) / h;
-      const dx = amp * Math.sin(T0 * 2.4 - v * 4 + c.phase) * Math.pow(v, 1.6);
-      ctx.drawImage(src, 0, y0, w, hh, -w / 2 + dx, y0 - h / 2, w, hh);
-    }
+    ctx.translate(c.x + (c.dx || 0), c.y + (c.dy || 0)); ctx.rotate(c.ang + (c.spinA || 0)); ctx.scale(s, s);
+    animJelly(c, src, w, h);
   } else {
     ctx.translate(c.x, c.y); ctx.rotate(c.ang); ctx.scale(c.face * s, s);
     const night = 1 - lightNow;
@@ -1054,7 +1040,7 @@ function drawBody(c, now){
       gr.addColorStop(0, `rgba(255,244,190,${night * .55})`); gr.addColorStop(1, 'rgba(255,244,190,0)');
       ctx.fillStyle = gr; ctx.beginPath(); ctx.moveTo(w * .45, -h * .05); ctx.lineTo(w * 1.8, -h * .75); ctx.lineTo(w * 1.8, h * .75); ctx.lineTo(w * .45, h * .1); ctx.closePath(); ctx.fill();
     }
-    ctx.drawImage(src, -w / 2, -h / 2);
+    animSub(c, src, w, h);
   }
   ctx.restore();
   if (c.type === 'decor') decorFx(c);
@@ -2849,6 +2835,84 @@ $('#btnCodePaste').addEventListener('click', async () => {
     await applyState(data); lists(); uiSettings(); uiCoins(); refreshUI(); save(); closeModals(); toast('Aquarium restauré !');
   } catch (e) { toast('Aucun code valide dans le presse-papiers.'); }
 });
+
+</script>
+<script>
+/* ============ Animation vivante : nageoires, queue, bouche, méduses, plantes, décors ============ */
+const ANIM_STRIPS = () => [56, 40, 26][perf.level];
+const SWAY_DECOR = { 'Herbe fantôme': 1, 'Algue noire': 1, 'Anémone vénéneuse': .8, 'Rose noire': .3, 'Corail d’os': .12 };
+
+// Appelé à chaque mise à jour pour chaque créature qui nage.
+function animTick(c, dt){
+  if (c.anchored || (c.type !== 'fish' && c.type !== 'visitor' && c.type !== 'jelly' && c.type !== 'sub')) return;
+  const sp = Math.hypot(c.vx || 0, c.vy || 0), asleep = c.sch === 'sleep', scared = c.fear > 0;
+  const rate = asleep ? 1.1 : 3 + Math.min(sp / 26, 4) + (scared ? 6 : 0) + (c.beat > 0 ? 4 : 0);
+  c.finT = (c.finT == null ? c.phase || 0 : c.finT) + dt * rate;
+  if (c.type === 'fish' && !asleep && !c.leaving && settings.bubbles > 0){
+    c.mouthT = (c.mouthT == null ? rand(3, 10) : c.mouthT) - dt;
+    if (c.mouthT <= 0){ c.mouthT = rand(7, 16); bubble(c.x + c.face * c.dw * .46, c.y - c.dh * .04, rand(2, 3.5), rand(40, 70)); }
+  }
+}
+
+// Poisson / visiteur : onde du corps + queue en éventail + nageoires (haut/bas) qui battent + mâchoire quand il mange.
+function animFish(c, src, w, h){
+  const sp = Math.min(1, Math.hypot(c.vx, c.vy) / 90), asleep = c.sch === 'sleep', scared = c.fear > 0, vis = c.type === 'visitor';
+  const calm = asleep ? .3 : 1, sw = Math.max(2, w / ANIM_STRIPS());
+  const amp = h * (vis ? .05 : .07) * (.45 + sp * .9 + (scared ? .35 : 0)) * calm;
+  const fT = c.finT || 0, fa = asleep ? .05 : .09 + .05 * sp + (scared ? .05 : 0);
+  const bands = perf.level < 2, y1 = h * .3, y2 = h * .7;
+  const jawOpen = c.beat > 0 ? Math.sin(c.beat * 40) * .5 + .5 : 0;
+  ctx.scale(1, 1 + .014 * Math.sin(T0 * (asleep ? 1.4 : 2.4) + c.phase));
+  for (let x0 = 0; x0 < w; x0 += sw){
+    const ww = Math.min(sw + .7, w - x0), t = (x0 + ww / 2) / w, tail = 1 - t, dx = -w / 2 + x0;
+    const dy = amp * Math.sin(c.wag - tail * 3.2) * Math.pow(tail, 1.7);
+    const tf = 1 + (.1 + .12 * sp) * calm * Math.sin(c.wag - tail * 1.5) * Math.pow(tail, 2.4);
+    if (!bands){ ctx.drawImage(src, x0, 0, ww, h, dx, dy - h / 2 * tf, ww, h * tf); continue; }
+    const edge = Math.sin(Math.PI * clamp(t, 0, 1)) * .6 + .4;
+    const f1 = fa * edge * (Math.sin(fT - t * 4.2) * .7 + Math.sin(fT * 1.8 - t * 8) * .3);
+    const f2 = fa * edge * (Math.sin(fT + 1.7 - t * 4.2) * .7 + Math.sin(fT * 1.6 + 1 - t * 7) * .3);
+    const jaw = t > .72 ? jawOpen * (t - .72) / .28 * h * .06 : 0;
+    const hT = y1 * tf * (1 + f1), bT = dy + (y1 - h / 2) * tf;
+    ctx.drawImage(src, x0, 0, ww, y1, dx + f1 * w * .05, bT - hT - jaw, ww, hT + .5);
+    ctx.drawImage(src, x0, y1, ww, y2 - y1, dx, bT, ww, (y2 - y1) * tf + .5);
+    ctx.drawImage(src, x0, y2, ww, h - y2, dx - f2 * w * .05, dy + (y2 - h / 2) * tf + jaw, ww, (h - y2) * tf * (1 + f2));
+  }
+}
+
+// Méduse : ombrelle qui se contracte puis se relâche, tentacules qui traînent et ondulent.
+function animJelly(c, src, w, h){
+  const ph = c.pulseT % 1, asleep = c.sch === 'sleep';
+  const contr = ph < .32 ? Math.sin(ph / .32 * Math.PI) : 0, rel = ph >= .32 ? Math.sin((ph - .32) / .68 * Math.PI) * .4 : 0;
+  const sy = 1 + .13 * contr - .05 * rel, rows = [90, 65, 45][perf.level], sh = Math.max(2, Math.round(h / rows));
+  const amp = Math.max(5, w * .07) * (asleep ? .5 : 1), drag = clamp(c.vx || 0, -80, 80) * .0016 * w;
+  ctx.scale(1, sy);
+  for (let y0 = 0; y0 < h; y0 += sh){
+    const hh = Math.min(sh + .7, h - y0), v = (y0 + hh / 2) / h, bell = Math.pow(1 - v, 1.3);
+    const wf = (1 - .2 * contr * bell + .07 * rel * bell) * (1 + .012 * Math.sin(T0 * 6 - v * 10 + c.phase));
+    const dx = amp * (Math.sin(T0 * 2.4 - v * 4 + c.phase) + .3 * Math.sin(T0 * 4.1 - v * 7 + c.phase * 2)) * Math.pow(v, 1.6) - drag * v * v + (contr - rel) * 0;
+    ctx.drawImage(src, 0, y0, w, hh, -w * wf / 2 + dx, y0 - h / 2, w * wf, hh);
+  }
+}
+
+// Spectre (sous-marin) : lente dérive spectrale, houle le long de la coque.
+function animSub(c, src, w, h){
+  const sw = Math.max(2, w / ANIM_STRIPS()), amp = h * .035, bob = Math.sin(T0 * 1.2 + c.phase) * h * .04;
+  ctx.rotate(Math.sin(T0 * .9 + c.phase) * .025);
+  for (let x0 = 0; x0 < w; x0 += sw){
+    const ww = Math.min(sw + .7, w - x0), dy = amp * Math.sin(T0 * 2 - x0 / w * 5 + c.phase);
+    ctx.drawImage(src, x0, 0, ww, h, -w / 2 + x0, -h / 2 + dy + bob, ww, h);
+  }
+}
+
+// Plantes et décors végétaux : balancement à deux harmoniques, ancré au sol.
+function swayStrips(src, w, h, amp, ph){
+  const sh = Math.max(2, Math.round(h / [90, 65, 45][perf.level]));
+  for (let y0 = 0; y0 < h; y0 += sh){
+    const hh = Math.min(sh + .7, h - y0), v = 1 - (y0 + hh / 2) / h;
+    const dx = amp * (Math.sin(T0 * 1.3 + v * 2.6 + ph) + .35 * Math.sin(T0 * 2.9 + v * 5 + ph * 1.7)) * Math.pow(v, 1.4);
+    ctx.drawImage(src, 0, y0, w, hh, -w / 2 + dx, y0 - h, w, hh);
+  }
+}
 
 </script>
 <script>
