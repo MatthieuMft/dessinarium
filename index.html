@@ -620,6 +620,7 @@ function rr(g, x, y, w, h, r){ g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w,
 const TYPES = {
   fish:  { label:'Créature',   size:112, animal:true,  hint:'Dessine de profil, tourné vers la droite →' },
   jelly: { label:'Méduse',     size:104, animal:true,  hint:'Cloche en haut, tentacules en bas' },
+  crab:  { label:'Crabe',      size:96,  animal:true,  hint:'Dessine de profil, tourné vers la droite → Il marchera sur le sable' },
   sub:   { label:'Spectre',    size:140, animal:false, hint:'Dessine de profil, tourné vers la droite →' },
   plant: { label:'Plante',     size:190, anchored:true, hint:'Elle pousse vers le haut, racines en bas' },
   decor: { label:'Décor',      size:150, anchored:true, hint:'Il sera posé sur le sable' },
@@ -849,8 +850,8 @@ function layout(c, dt){
 const anchoredY = c => sandTop() + sandH * (0.2 + 0.6 * c.sf);
 function bounds(c){
   const hw = c.dw / 2, hh = c.dh / 2, st = sandTop(), fi = frameInset();
-  const y1 = c.type === 'jelly' ? st - hh - 8 : c.type === 'sub' ? st - hh - 6 : st - hh * .3 - 6;
-  const y0 = hh + 24 + fi;
+  const y1 = c.type === 'crab' ? H - hh - 14 - fi : c.type === 'jelly' ? st - hh - 8 : c.type === 'sub' ? st - hh - 6 : st - hh * .3 - 6;
+  const y0 = c.type === 'crab' ? st + hh * .7 + 4 : hh + 24 + fi;
   return { x0: hw + 8 + fi, x1: Math.max(hw + 9 + fi, W - hw - 8 - fi), y0, y1: Math.max(y0 + 1, y1) };
 }
 function lists(){
@@ -882,7 +883,7 @@ function addCreature(o, opts = {}){
   if (c.anchored) c.y = anchoredY(c);
   else {
     const b = bounds(c);
-    if (opts.spawn){ c.x = rand(W * .25, W * .75); c.y = clamp(H * .14, b.y0, b.y1); splash(c.x, c.y, c.dw); }
+    if (opts.spawn && c.type !== 'crab'){ c.x = rand(W * .25, W * .75); c.y = clamp(H * .14, b.y0, b.y1); splash(c.x, c.y, c.dw); }
     else if (o.fx == null) c.y = rand(b.y0, b.y1);
     c.tx = c.x; c.ty = c.y; c.retarget = 0;
   }
@@ -1064,7 +1065,7 @@ function update(dt){
     }
     if (c.animal){ c.coinT -= dt; if (c.coinT <= 0){ c.coinT = rand(18, 34) / (1 + c.level * .12); if (c.hunger < .75) dropCoin(c); } }
     if (!c.drag && !c.held && !(c.glide > 0)){
-      if (c.type === 'fish') updFish(c, dt); else if (c.type === 'jelly') updJelly(c, dt); else updSub(c, dt);
+      if (c.type === 'fish') updFish(c, dt); else if (c.type === 'jelly') updJelly(c, dt); else if (c.type === 'crab') updCrabC(c, dt); else updSub(c, dt);
     }
     if (c.type !== 'jelly'){
       const target = c.face * Math.atan(c.vy / Math.max(30, Math.abs(c.vx))) * (c.type === 'sub' ? .4 : .7);
@@ -1121,6 +1122,8 @@ function drawBody(c, now){
     const gs = 1 + (c.beat || 0) * .25;
     ctx.translate(c.x + (c.dx || 0), c.y + (c.dy || 0)); ctx.rotate(c.ang + (c.spinA || 0)); ctx.scale(c.face * s * gs, s * gs);
     animFish(c, src, w, h);
+  } else if (c.type === 'crab'){
+    animCrab(c, src, w, h);
   } else if (c.type === 'jelly'){
     ctx.translate(c.x + (c.dx || 0), c.y + (c.dy || 0)); ctx.rotate(c.ang + (c.spinA || 0)); ctx.scale(s, s);
     animJelly(c, src, w, h);
@@ -3043,7 +3046,7 @@ const EVT_LABELS = { moon: 'Lune de sang', fog: 'Brume', storm: 'Tempête', krak
 function bestiaryDefs(){
   return [
     { g: 'Couleurs', items: COLOR_LIST.concat(['grise']).map(c => ['col:' + c, c.charAt(0).toUpperCase() + c.slice(1)]) },
-    { g: 'Formes', items: [['type:fish', 'Créature'], ['type:jelly', 'Méduse'], ['type:sub', 'Spectre'], ['type:plant', 'Plante'], ['type:decor', 'Décor']] },
+    { g: 'Formes', items: [['type:fish', 'Créature'], ['type:crab', 'Crabe'], ['type:jelly', 'Méduse'], ['type:sub', 'Spectre'], ['type:plant', 'Plante'], ['type:decor', 'Décor']] },
     { g: 'Stades', items: STAGES.map((s, i) => ['lvl:' + i, s]) },
     { g: 'Caractères', items: Object.keys(PERS).map(k => ['pers:' + k, PERS[k]]) },
     { g: 'Mutations', items: [['mut:lunaire', 'Lunaire'], ['mut:ebene', 'Ébène'], ['mut:sanguine', 'Sanguine']] },
@@ -3393,14 +3396,6 @@ function renderSagaPane(tab){
 let vieSpr = null;
 function vieSprites(){
   if (vieSpr) return vieSpr;
-  const crab = mk(130, 90, g => {
-    g.lineWidth = 5; g.strokeStyle = OUT; g.fillStyle = '#b5533a';
-    for (const sg of [-1, 1]) for (let i = 0; i < 3; i++){ g.beginPath(); g.moveTo(65 + sg * 24, 56 + i * 5); g.lineTo(65 + sg * (46 + i * 4), 70 + i * 6); g.lineTo(65 + sg * (52 + i * 4), 86); g.stroke(); }
-    for (const sg of [-1, 1]){ g.beginPath(); g.moveTo(65 + sg * 30, 44); g.quadraticCurveTo(65 + sg * 52, 36, 65 + sg * 56, 22); g.stroke();
-      g.beginPath(); g.arc(65 + sg * 60, 18, 15, 0, TAU); g.fill(); g.stroke(); g.fillStyle = OUT; g.beginPath(); g.moveTo(65 + sg * 60, 18); g.lineTo(65 + sg * 74, 4); g.lineTo(65 + sg * 68, 22); g.closePath(); g.fill(); g.fillStyle = '#b5533a'; }
-    g.beginPath(); g.ellipse(65, 54, 40, 26, 0, 0, TAU); g.fill(); g.stroke();
-    g.strokeStyle = OUT; g.lineWidth = 4; for (const sg of [-1, 1]){ g.beginPath(); g.moveTo(65 + sg * 12, 36); g.lineTo(65 + sg * 12, 24); g.stroke(); g.fillStyle = '#efe6cf'; g.beginPath(); g.arc(65 + sg * 12, 22, 6, 0, TAU); g.fill(); g.stroke(); g.fillStyle = OUT; g.beginPath(); g.arc(65 + sg * 12, 22, 2.4, 0, TAU); g.fill(); }
-  });
   const bottle = mk(80, 150, g => {
     g.lineWidth = 5; g.strokeStyle = OUT;
     g.fillStyle = '#8fc9d4'; rr(g, 16, 52, 48, 90, 16); g.fill(); g.stroke(); rr(g, 30, 22, 20, 36, 4); g.fill(); g.stroke();
@@ -3415,7 +3410,7 @@ function vieSprites(){
     g.beginPath(); g.moveTo(60, 20); g.quadraticCurveTo(74, 6, 80, 12); g.stroke(); g.fillStyle = '#ffe9a0'; g.beginPath(); g.arc(82, 13, 6, 0, TAU); g.fill(); g.stroke();
     g.fillStyle = '#efe6cf'; g.beginPath(); g.arc(70, 30, 5, 0, TAU); g.fill(); g.stroke(); g.fillStyle = OUT; g.beginPath(); g.arc(71, 30, 2, 0, TAU); g.fill();
   });
-  return vieSpr = { crab: gravure(crab, 41), bottle: gravure(bottle, 42), lant: gravure(lant, 43) };
+  return vieSpr = { bottle: gravure(bottle, 42), lant: gravure(lant, 43) };
 }
 
 /* ---------- émotes : de petites bulles qui disent ce que ressent chaque créature ---------- */
@@ -3491,25 +3486,6 @@ function decorReaction(c, d){
   if (li >= 0){ emote(c, 'heart', 2.6); addLove(c, 1); c.known |= (li === 0 ? 1 : 4); logc(c, `A admiré : ${d.name.toLowerCase()}.`); for (let i = 0; i < 3; i++) setTimeout(() => heart(c.x + rand(-16, 16), c.y - c.dh * .5), i * 150); }
   else if (hates){ emote(c, 'skull', 2.6); c.known |= 2; c.fear = Math.max(c.fear, .9); c.scare = { x: d.x, y: d.y - d.dh * .3 }; logc(c, `A fui : ${d.name.toLowerCase()}.`); }
   else { emote(c, 'note', 1.8); if (Math.random() < .3) logc(c, `A inspecté : ${d.name.toLowerCase()}.`); }
-}
-
-/* ---------- faune du sol : crabes ---------- */
-let crabs = [];
-const crabY = cr => sandTop() + 16 + cr.row * Math.max(10, sandH - 34);
-function updateCrabs(dt){
-  const n = clamp(Math.round(W / 520), 1, 3); while (crabs.length < n) crabs.push({ x: rand(W * .1, W * .9), row: rand(.1, .9), dir: Math.random() < .5 ? -1 : 1, t: rand(0, 6), pause: rand(.5, 3), flee: 0, cd: rand(5, 20), mv: 0 });
-  for (const cr of crabs){
-    cr.t += dt; cr.cd = Math.max(0, cr.cd - dt); cr.mv = 0; const y = crabY(cr);
-    for (const o of creatures){ if (o.anchored || o.leaving) continue; if (Math.abs(o.x - cr.x) < 80 * unit + 20 && Math.abs(o.y - y) < 60 * unit + 40 && cr.flee <= 0){ cr.flee = .9; cr.dir = o.x < cr.x ? 1 : -1; break; } }
-    if (cr.flee > 0){ cr.flee -= dt; cr.x += cr.dir * 120 * unit * dt; cr.mv = 1; }
-    else if (cr.pause > 0) cr.pause -= dt;
-    else { cr.x += cr.dir * 22 * unit * dt; cr.mv = .5; cr.walk = (cr.walk || rand(2, 5)) - dt; if (cr.walk <= 0){ cr.walk = 0; cr.pause = rand(1, 4); if (Math.random() < .5) cr.dir = -cr.dir; } }
-    if (cr.x < 30){ cr.x = 30; cr.dir = 1; } if (cr.x > W - 30){ cr.x = W - 30; cr.dir = -1; }
-  }
-}
-function drawCrab(cr){
-  const S = vieSprites().crab, w = 50 * unit + 28, h = w * S.height / S.width, y = crabY(cr), bob = cr.mv ? Math.abs(Math.sin(cr.t * (cr.mv > .6 ? 22 : 11))) * 2.5 : 0;
-  ctx.save(); ctx.translate(cr.x, y - bob); ctx.scale(cr.dir, 1); ctx.drawImage(S, -w / 2, -h, w, h); ctx.restore();
 }
 
 /* ---------- poissons-lanternes sauvages (décor vivant, loin derrière) ---------- */
@@ -3619,7 +3595,6 @@ function viePointer(x, y){
     return true;
   }
   if (bottle && Math.hypot(x - bottle.x, y - bottle.y) < 44 * unit + 14 + (COARSE ? 14 : 0)){ openBottle(); return true; }
-  for (const cr of crabs){ if (Math.hypot(x - cr.x, y - (crabY(cr) - 14)) < 30 * unit + 16 + (COARSE ? 14 : 0)){ cr.flee = 1.1; cr.dir = x < cr.x ? 1 : -1; if (cr.cd <= 0){ cr.cd = 45; const n = 1 + ((Math.random() * 3) | 0); addCoins(n); floatText(cr.x, crabY(cr) - 30, '+' + n); snd('coin'); sparkle(cr.x, crabY(cr) - 20, 8); } else snd('pop'); return true; } }
   if (y < sandTop() + 4){          // un appel dans l’eau : les curieux viennent, les timides sursautent
     ripples.push({ x, y, t: 0 });
     for (const c of creatures){ if (c.type !== 'fish' || c.leaving || c.held || c.drag || c.sch) continue; const d = Math.hypot(c.x - x, c.y - y); if (d > 240 * unit + 80) continue;
@@ -3640,7 +3615,7 @@ function vieUpdate(dt){
     const list = creatures.filter(c => c.animal && !c.emo && !c.leaving && !c.anchored); const c = list.length ? pickOne(list) : null;
     if (c){ if (c.sch === 'sleep') emote(c, 'zzz', 2.6); else if (c.hunger > .8) emote(c, 'food', 2.4); else if (c.love >= 70 && Math.random() < .35) emote(c, 'heart', 2); else if (Math.random() < .12) emote(c, 'note', 1.8); } }
   for (const p of ripples) p.t += dt; ripples = ripples.filter(p => p.t < .9);
-  updateCrabs(dt); updateWild(dt); updateSong(dt); updateCurrent(dt); updateMael(dt);
+  updateWild(dt); updateSong(dt); updateCurrent(dt); updateMael(dt);
   if (bottle){ bottle.t += dt; bottle.x += bottle.dir * 14 * unit * dt; bottle.y = (96 + 14 * unit) + Math.sin(bottle.t * 1.4) * 6; if (bottle.t > bottle.life || bottle.x < -60 || bottle.x > W + 60) bottle = null; }
   if (stats.play > 200){ vieSched.bottle -= dt; if (vieSched.bottle <= 0){ vieSched.bottle = rand(300, 560); startBottle(); } }
   if (stats.play > 500){ vieSched.cur -= dt; if (vieSched.cur <= 0){ vieSched.cur = rand(900, 1300); if (!amb.storm) startCurrent(); } }
@@ -3648,7 +3623,7 @@ function vieUpdate(dt){
 }
 function vieTrigger(k){ return k === 'bottle' ? startBottle() : k === 'current' ? startCurrent() : k === 'maelstrom' ? startMaelstrom() : false; }
 function vieDraw(phase){
-  if (phase === 'back'){ drawWild(); for (const cr of crabs) drawCrab(cr); }
+  if (phase === 'back'){ drawWild(); }
   else if (phase === 'mid'){
     if (bottle){ const S = vieSprites().bottle, w = 34 * unit + 20, h = w * S.height / S.width; ctx.save(); ctx.translate(bottle.x, bottle.y); ctx.rotate(.9 + Math.sin(bottle.t * 1.4) * .12); ctx.drawImage(S, -w / 2, -h / 2, w, h); ctx.restore();
       ctx.save(); ctx.globalCompositeOperation = 'lighter'; const g = ctx.createRadialGradient(bottle.x, bottle.y, 0, bottle.x, bottle.y, 46); g.addColorStop(0, `rgba(214,200,255,${.25 + .15 * Math.sin(bottle.t * 3)})`); g.addColorStop(1, 'rgba(214,200,255,0)'); ctx.fillStyle = g; ctx.fillRect(bottle.x - 50, bottle.y - 50, 100, 100); ctx.restore(); }
@@ -3656,6 +3631,25 @@ function vieDraw(phase){
     drawCurrent(); drawMael(); drawRings();
     for (const c of creatures) if (c.emo && !c.leaving) drawEmote(c);
   }
+}
+
+/* ---------- crabes dessinés : ils marchent sur le sable, mangent les restes tombés au sol ---------- */
+function updCrabC(c, dt){
+  const k = c.cb || (c.cb = { row: Math.random(), pause: rand(.3, 2), walk: rand(2, 5), mv: 0 });
+  const b = bounds(c); k.mv = 0; c.vy = 0; let dir = c.dir || 1, speed = 0;
+  let tf = null, td = 1e9; for (const f of foods){ if (f.dead || !(f.landed > .3)) continue; const d = Math.abs(f.x - c.x); if (d < 440 * unit && d < td){ td = d; tf = f; } }
+  if (c.fear > 0 && c.scare){ c.fear -= dt; dir = c.x < c.scare.x ? -1 : 1; speed = 120 * unit; k.mv = 1; }
+  else if (c.sch === 'sleep'){ speed = 0; }
+  else if (c.sch){ const dx = c.tx - c.x; if (Math.abs(dx) > 8){ dir = Math.sign(dx); speed = 70 * unit; k.mv = .8; } k.row = clamp((c.ty - b.y0) / Math.max(1, b.y1 - b.y0) / .65, 0, 1); }
+  else if (tf && c.hunger > .3){
+    const dx = tf.x - c.x; if (Math.abs(dx) > 10){ dir = Math.sign(dx); speed = 62 * unit; k.mv = .8; }
+    k.row += (clamp((tf.y - b.y0) / Math.max(1, b.y1 - b.y0) / .65, 0, 1) - k.row) * Math.min(1, dt * 2);
+    if (Math.abs(dx) < 14 + c.dw * .3 && Math.abs(tf.y - c.y) < 34 + c.dh * .6) eat(c, tf);
+  }
+  else if (k.pause > 0){ k.pause -= dt; }
+  else { speed = 22 * unit; k.mv = .5; k.walk -= dt; if (k.walk <= 0){ k.walk = rand(2, 5); k.pause = rand(1, 3.5); if (Math.random() < .5) dir = -dir; k.row = clamp(k.row + rand(-.25, .25), 0, 1); } }
+  c.dir = dir; c.x = clamp(c.x + dir * speed * dt, b.x0, b.x1); if (c.x <= b.x0) c.dir = 1; if (c.x >= b.x1) c.dir = -1; c.vx = dir * speed;
+  c.y += (lerp(b.y0, b.y1, k.row * .65) - c.y) * Math.min(1, dt * 4); c.wag += dt * (k.mv > .6 ? 20 : k.mv ? 10 : 0);
 }
 
 </script>
@@ -3736,6 +3730,14 @@ function swayStrips(src, w, h, amp, ph){
   }
 }
 
+// Crabe dessiné : il marche de côté sur le sable, les pattes qui trépident.
+function animCrab(c, src, w, h){
+  const k = c.cb || {}, mv = k.mv || 0, bob = mv ? Math.abs(Math.sin(c.wag)) * h * .05 : 0, sq = mv ? 1 + Math.sin(c.wag * 2) * .018 : 1 + Math.sin(T0 * 1.5 + c.phase) * .008;
+  ctx.translate(c.x + (c.dx || 0), c.y + (c.dy || 0) - bob); ctx.rotate(c.spinA || 0); ctx.scale(c.face * c.s, c.s * sq);
+  ctx.transform(1, 0, mv ? Math.sin(c.wag * 2) * .045 : 0, 1, 0, 0);
+  ctx.drawImage(src, -w / 2, -h / 2);
+}
+
 </script>
 <script>
 'use strict';
@@ -3743,13 +3745,14 @@ function swayStrips(src, w, h, amp, ph){
    Dessinarium — éditeur de dessin
    pinceaux, gomme, pot, pipette, formes, tampons, symétrie, calques, zoom
    ===================================================================== */
-const PAD_SIZES = { fish:[640,400], jelly:[640,400], sub:[640,400], plant:[640,400], decor:[640,400], bg:[640,400], floor:[960,180] };
+const PAD_SIZES = { fish:[640,400], crab:[640,400], jelly:[640,400], sub:[640,400], plant:[640,400], decor:[640,400], bg:[640,400], floor:[960,180] };
 const isMobilePortrait = () => window.matchMedia('(max-width:700px) and (orientation:portrait)').matches;
 // Sur téléphone en portrait, une page plus haute = un dessin plus grand à l'écran (seulement si le dessin est vide).
 
 /* ---------- Pictos (mobile) ---------- */
 const ICONS = {
   fish: '<path d="M3 12c3-5 8-6 12-3l5-3v12l-5-3c-4 3-9 2-12-3z"/><circle cx="8" cy="11" r=".9" fill="currentColor"/>',
+  crab: '<path d="M7 15a5 4 0 0 1 10 0v1H7z"/><path d="M7 14L4 11M17 14l3-3M4 7l1 3M20 7l-1 3M8 17l-2 3M12 17v3M16 17l2 3"/>',
   jelly: '<path d="M5 12a7 7 0 0 1 14 0z"/><path d="M8 12c-1 3 1 4 0 7M12 12c-1 3 1 5 0 8M16 12c-1 3 1 4 0 7"/>',
   sub: '<path d="M6 20V11a6 6 0 0 1 12 0v9l-2-2-2 2-2-2-2 2-2-2z"/><circle cx="10" cy="11" r=".9" fill="currentColor"/><circle cx="14" cy="11" r=".9" fill="currentColor"/>',
   plant: '<path d="M12 21V9M12 15c-4 0-6-3-6-6 4 0 6 2 6 6M12 12c3 0 5-2 5-5-3 0-5 1.5-5 5"/>',
@@ -3772,7 +3775,7 @@ const ICONS = {
   pastel: '<rect x="8" y="3" width="8" height="18" rx="1"/><path d="M8 9h8M8 15h8"/>',
   encre: '<path d="M12 3l5 8-5 10-5-10z"/><path d="M12 11v4"/>'
 };
-const TYPE_IC = { fish: 'fish', jelly: 'jelly', sub: 'sub', plant: 'plant', decor: 'decor', bg: 'bg', floor: 'floor' };
+const TYPE_IC = { fish: 'fish', crab: 'crab', jelly: 'jelly', sub: 'sub', plant: 'plant', decor: 'decor', bg: 'bg', floor: 'floor' };
 const TOOL_IC = { brush: 'brush', eraser: 'eraser', fill: 'fill', pick: 'pick', shape: 'shape', stamp: 'stamp', move: 'move', pan: 'pan' };
 const BRUSH_IC = { pinceau: 'gouache', crayon: 'crayon', feutre: 'feutre', aquarelle: 'aquarelle', texture: 'fusain', aero: 'pastel', calli: 'encre' };
 const svgIc = n => '<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + (ICONS[n] || ICONS.decor) + '</svg>';
@@ -3793,7 +3796,7 @@ function layoutEditor(){
     side.insertBefore(sz, $('#grpColor')); em.appendChild(ma); closeBrushPop();
   }
 }
-function adaptPadSizes(){ if (typeof isBlank === 'function' && !isBlank()) return; const sz = isMobilePortrait() ? [520, clamp(Math.round(520 * (window.innerHeight - 320) / Math.max(200, window.innerWidth - 20)), 380, 640)] : [640, 400]; for (const t of ['fish', 'jelly', 'sub', 'plant', 'decor']) PAD_SIZES[t] = sz; }
+function adaptPadSizes(){ if (typeof isBlank === 'function' && !isBlank()) return; const sz = isMobilePortrait() ? [520, clamp(Math.round(520 * (window.innerHeight - 320) / Math.max(200, window.innerWidth - 20)), 380, 640)] : [640, 400]; for (const t of ['fish', 'crab', 'jelly', 'sub', 'plant', 'decor']) PAD_SIZES[t] = sz; }
 const LAYER_NAMES = ['Couleur', 'Détails', 'Contour'];
 const PALETTE = ['#2b2438','#ffffff','#9aa3b5','#e5383b','#ff7a45','#ffc233','#fff176','#a7d948','#2fb36d','#17b6b0','#27a4e8','#3d5bd9','#7b4fd6','#d04fb8','#ff8fb1','#8b5a3c','#f3d2a6','#5b3a1e'];
 
