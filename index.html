@@ -659,7 +659,7 @@ const COARSE = (window.matchMedia && matchMedia('(pointer:coarse)').matches) || 
 const perf = { level: COARSE ? 1 : 0, ema: 16, clock: 0, frames: 0 };
 const dprCap = () => [2, 1.5, 1][perf.level];
 const buzz = ms => { try { if (navigator.vibrate) navigator.vibrate(ms); } catch (e) {} };
-const DEFAULT_STATE = () => ({ coins: 60, owned: new Set(), cap: 0, render: 'natural', carnet: [], gifts: {} });
+const DEFAULT_STATE = () => ({ coins: 60, owned: new Set(), cap: 0, render: 'gravure', da: 1, carnet: [], gifts: {} });
 let state = DEFAULT_STATE();
 const scene = { bg:null, floor:null };
 
@@ -940,7 +940,7 @@ function splash(x, y, w){ for (let i = 0; i < 9; i++) bubble(x + rand(-w * .4, w
 function heart(x, y){ fx.push({ k:'h', x:x + rand(-8, 8), y, vy:rand(26, 44), life:1.4, max:1.4, r:rand(6, 9) }); }
 function sparkle(x, y, n){ for (let i = 0; i < n; i++){ const a = Math.random() * TAU, v = rand(40, 130);
   fx.push({ k:'s', x, y, vx:Math.cos(a) * v, vy:Math.sin(a) * v, life:rand(.6, 1.1), max:1.1, r:rand(3, 7) }); } }
-function confetti(x, y, n){ const cols = ['#ff5c7a','#ffd24d','#4fd1c5','#7c8cff','#ff9f43','#a7e35e'];
+function confetti(x, y, n){ const cols = ['#c63a5c','#c9a24b','#5aa6a0','#8a6ad0','#d9803a','#8aa05a'];
   for (let i = 0; i < n; i++) fx.push({ k:'k', x:x + rand(-20, 20), y:y + rand(-20, 10), vx:rand(-90, 90), vy:rand(-170, -60), rot:rand(0, TAU), vr:rand(-6, 6), col:pickOne(cols), life:rand(1.6, 2.6), max:2.6, w:rand(4, 8) }); }
 function dropFood(x, y){
   if (foods.length > 90) return;
@@ -1152,11 +1152,11 @@ function drawShard(x, y, r, a = 1){
 function drawFx(p){
   if (p.k === 'b'){
     ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, TAU);
-    ctx.fillStyle = 'rgba(255,255,255,.14)'; ctx.fill(); ctx.strokeStyle = 'rgba(255,255,255,.6)'; ctx.lineWidth = 1; ctx.stroke();
-    ctx.beginPath(); ctx.arc(p.x - p.r * .3, p.y - p.r * .3, p.r * .25, 0, TAU); ctx.fillStyle = 'rgba(255,255,255,.8)'; ctx.fill();
+    ctx.fillStyle = 'rgba(205,185,255,.13)'; ctx.fill(); ctx.strokeStyle = 'rgba(214,200,255,.6)'; ctx.lineWidth = 1; ctx.stroke();
+    ctx.beginPath(); ctx.arc(p.x - p.r * .3, p.y - p.r * .3, p.r * .25, 0, TAU); ctx.fillStyle = 'rgba(236,228,255,.8)'; ctx.fill();
   } else if (p.k === 'h'){
     const a = clamp(p.life / p.max * 1.4, 0, 1), s = p.r; ctx.save(); ctx.globalAlpha = a; ctx.translate(p.x, p.y);
-    ctx.fillStyle = '#ff5c7a'; ctx.beginPath(); ctx.moveTo(0, s * .35);
+    ctx.fillStyle = '#c63a5c'; ctx.beginPath(); ctx.moveTo(0, s * .35);
     ctx.bezierCurveTo(-s, -s * .3, -s * .4, -s * .95, 0, -s * .4); ctx.bezierCurveTo(s * .4, -s * .95, s, -s * .3, 0, s * .35); ctx.fill(); ctx.restore();
   } else if (p.k === 'f'){ drawCoin(p.x, p.y, 10 * (1 - p.t / p.d * .3)); }
   else if (p.k === 'x'){
@@ -1165,7 +1165,7 @@ function drawFx(p){
   } else if (p.k === 'k'){
     ctx.save(); ctx.globalAlpha = clamp(p.life / .6, 0, 1); ctx.translate(p.x, p.y); ctx.rotate(p.rot); ctx.fillStyle = p.col; ctx.fillRect(-p.w / 2, -p.w / 4, p.w, p.w / 2); ctx.restore();
   } else {
-    const a = clamp(p.life / p.max, 0, 1), s = p.r * (.5 + a * .5); ctx.save(); ctx.globalAlpha = a; ctx.translate(p.x, p.y); ctx.fillStyle = '#ffe27a';
+    const a = clamp(p.life / p.max, 0, 1), s = p.r * (.5 + a * .5); ctx.save(); ctx.globalAlpha = a; ctx.translate(p.x, p.y); ctx.fillStyle = '#f0d98a';
     ctx.beginPath(); ctx.moveTo(0, -s); ctx.quadraticCurveTo(0, 0, s, 0); ctx.quadraticCurveTo(0, 0, 0, s); ctx.quadraticCurveTo(0, 0, -s, 0); ctx.quadraticCurveTo(0, 0, 0, -s); ctx.fill(); ctx.restore();
   }
 }
@@ -1176,7 +1176,7 @@ function drawParticles(){
     ctx.save(); ctx.globalCompositeOperation = 'lighter';
     for (const s of snow.slice(0, N)){
       const a = (.25 + .35 * Math.sin(T0 * 1.5 + s.ph)) * (.6 + (1 - L) * .9);
-      ctx.fillStyle = `hsla(${165 + (s.ph * 23) % 90},90%,62%,${Math.max(0, a)})`; ctx.beginPath(); ctx.arc(s.x * W, s.y * H, s.r * 2.2, 0, TAU); ctx.fill();
+      ctx.fillStyle = `hsla(${[268, 300, 172][Math.floor(s.ph * 7) % 3]},62%,68%,${Math.max(0, a)})`; ctx.beginPath(); ctx.arc(s.x * W, s.y * H, s.r * 2.2, 0, TAU); ctx.fill();
     }
     ctx.restore(); return;
   }
@@ -1193,15 +1193,15 @@ function render(now){
   const L = lightNow;
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
   ctx.drawImage(bg, 0, 0, W, H);
-  const sg = ctx.createLinearGradient(0, 0, 0, 46); sg.addColorStop(0, 'rgba(255,255,255,.28)'); sg.addColorStop(1, 'rgba(255,255,255,0)');
+  const sg = ctx.createLinearGradient(0, 0, 0, 46); sg.addColorStop(0, 'rgba(214,200,255,.26)'); sg.addColorStop(1, 'rgba(214,200,255,0)');
   ctx.fillStyle = sg; ctx.fillRect(0, 0, W, 46);
-  ctx.strokeStyle = 'rgba(255,255,255,.4)'; ctx.lineWidth = 2; ctx.beginPath();
+  ctx.strokeStyle = 'rgba(214,200,255,.4)'; ctx.lineWidth = 2; ctx.beginPath();
   for (let x = 0; x <= W + 10; x += 10){ const y = 9 + Math.sin(x * .02 + T0 * 1.4) * 2.4 + Math.sin(x * .05 - T0) * 1.2; x ? ctx.lineTo(x, y) : ctx.moveTo(x, y); }
   ctx.stroke();
   if (settings.rays && perf.level < 2) for (let i = 0; i < 5; i++){
     const x0 = W * (.08 + .2 * i) + Math.sin(T0 * .15 + i * 2) * 40, wt = 50 + i * 16, wb = wt * 2.3, len = H * .8, sh = 60 + i * 10;
     const gr = ctx.createLinearGradient(0, 0, 0, len), a = .13 * L * (.7 + .3 * Math.sin(T0 * .5 + i * 1.7));
-    gr.addColorStop(0, `rgba(255,255,255,${a})`); gr.addColorStop(1, 'rgba(255,255,255,0)');
+    gr.addColorStop(0, `rgba(214,200,255,${a})`); gr.addColorStop(1, 'rgba(214,200,255,0)');
     ctx.fillStyle = gr; ctx.beginPath(); ctx.moveTo(x0 - wt / 2, 0); ctx.lineTo(x0 + wt / 2, 0); ctx.lineTo(x0 + wb / 2 + sh, len); ctx.lineTo(x0 - wb / 2 + sh, len); ctx.closePath(); ctx.fill();
   }
   drawParticles();
@@ -1247,7 +1247,7 @@ function frame(now){
 let saveTimer = 0;
 function stateObj(){
   return { v: 3, savedAt: Date.now(), settings, stats,
-    state: { coins: state.coins, owned: [...state.owned], cap: state.cap, render: state.render, carnet: state.carnet, gifts: state.gifts, saga: state.saga },
+    state: { coins: state.coins, owned: [...state.owned], cap: state.cap, render: state.render, da: 1, carnet: state.carnet, gifts: state.gifts, saga: state.saga },
     creatures: creatures.map(c => ({ id:c.id, type:c.type, name:c.name, png:c.shopId ? null : c.png, shopId:c.shopId, hy:c.hy, xp:c.xp, born:c.born, sf:c.sf, fx:c.x / W, fy:c.y / H, layer:c.layer, flip:c.flip, sz:c.sz, bd:c.bd, fixed:c.fixed, pers:c.pers, friend:c.friend, love:c.love, likes:c.likes, hates:c.hates, known:c.known, log:c.log, tricks:c.tricks, trickProg:c.trickProg, st:c.st })) };
 }
 function saveSoon(){ clearTimeout(saveTimer); saveTimer = setTimeout(save, 700); }
@@ -1272,7 +1272,7 @@ async function applyState(data){
   settings.auto = false; settings.light = clamp(+settings.light || def.light, 0, 1); settings.bubbles = clamp(settings.bubbles | 0, 0, 3);
   stats = Object.assign({ xp:0, drawn:0, fed:0, hatched:0, visits:0, chests:0, birthdays:0, maxLevel:0 }, data.stats || {});
   const s = data.state || {};
-  state = Object.assign(DEFAULT_STATE(), { coins: Number.isFinite(s.coins) ? s.coins : 60, cap: clamp(s.cap | 0, 0, 6), render: MEDIUMS.some(m => m[0] === s.render) ? s.render : 'natural', carnet: Array.isArray(s.carnet) ? s.carnet.slice(0, 60) : [], gifts: s.gifts && typeof s.gifts === 'object' ? s.gifts : {}, saga: s.saga && typeof s.saga === 'object' ? s.saga : SAGA_DEF() });
+  state = Object.assign(DEFAULT_STATE(), { coins: Number.isFinite(s.coins) ? s.coins : 60, cap: clamp(s.cap | 0, 0, 6), render: (s.da && MEDIUMS.some(m => m[0] === s.render)) ? s.render : 'gravure', da: 1, carnet: Array.isArray(s.carnet) ? s.carnet.slice(0, 60) : [], gifts: s.gifts && typeof s.gifts === 'object' ? s.gifts : {}, saga: s.saga && typeof s.saga === 'object' ? s.saga : SAGA_DEF() });
   state.owned = new Set(Array.isArray(s.owned) ? s.owned : []); initOwned();
   scene.bg = scene.floor = null;
   for (const k of ['bg', 'floor']) if (settings[k + 'Img']){ const im = await loadImg(settings[k + 'Img']); if (im) scene[k] = copyCanvas(im); else settings[k + 'Img'] = null; }
@@ -1305,6 +1305,7 @@ async function loadSaved(){
    (déformation à la main, grain du papier, bords qui bavent, hachures…)
    ===================================================================== */
 const MEDIUMS = [
+  ['gravure',  'Gravure gothique'],
   ['natural',  'Tel que dessiné'],
   ['gouache',  'Gouache'],
   ['aquarelle','Aquarelle'],
@@ -1361,6 +1362,10 @@ function grainTile(){
 
 /* ---------- le moteur : paintify(sprite, matière) ---------- */
 function paintify(src, medium, seed = 1){
+  if (medium === 'gravure') return gravure(src, seed);
+  return paintifyRaw(src, medium, seed);
+}
+function paintifyRaw(src, medium, seed = 1){
   if (!medium || medium === 'natural') return src;
   paperTile();
   const w = src.width, h = src.height, sd = src.getContext('2d').getImageData(0, 0, w, h).data;
@@ -1616,20 +1621,85 @@ function paintFishDemo(hue){
   });
 }
 const DECORS = [
-  { id:'d:herbe',     n:'Herbe fantôme',      kind:'plant', price:20,  paint:paintHerbe,     medium:'feutre',    sz:1 },
-  { id:'d:rocher',    n:'Rochers',            kind:'decor', price:20,  paint:paintRocher,    medium:'fusain',    sz:1 },
-  { id:'d:algue',     n:'Algue noire',        kind:'plant', price:25,  paint:paintAlgue,     medium:'aquarelle', sz:1 },
-  { id:'d:crane',     n:'Crâne',              kind:'decor', price:40,  paint:paintCrane,     medium:'fusain',    sz:.6 },
-  { id:'d:rose',      n:'Rose noire',         kind:'plant', price:45,  paint:paintRose,      medium:'gouache',   sz:.7 },
-  { id:'d:ancre',     n:'Ancre rouillée',     kind:'decor', price:55,  paint:paintAncre,     medium:'crayon',    sz:.8 },
-  { id:'d:corail',    n:'Corail d’os',        kind:'plant', price:60,  paint:paintCorail,    medium:'crayon',    sz:.9 },
-  { id:'d:anemone',   n:'Anémone vénéneuse',  kind:'plant', price:60,  paint:paintAnemone,   medium:'aquarelle', sz:.75 },
-  { id:'d:cage',      n:'Cage à oiseau',      kind:'decor', price:80,  paint:paintCage,      medium:'gouache',   sz:.9 },
-  { id:'d:croix',     n:'Croix de pierre',    kind:'decor', price:90,  paint:paintCroix,     medium:'fusain',    sz:1 },
-  { id:'d:chandelier',n:'Candélabre',         kind:'decor', price:120,  paint:paintChandelier,medium:'gouache',   sz:1 },
-  { id:'d:chapelle',  n:'Chapelle engloutie', kind:'decor', price:220, paint:paintChapelle,  medium:'gouache',   sz:1.4 },
-  { id:'d:epave',     n:'Épave',              kind:'decor', price:280, paint:paintEpave,     medium:'fusain',    sz:1.6 }
+  { id:'d:herbe',     n:'Herbe fantôme',      kind:'plant', price:20,  paint:paintHerbe,     medium:'gravure',    sz:1 },
+  { id:'d:rocher',    n:'Rochers',            kind:'decor', price:20,  paint:paintRocher,    medium:'gravure',    sz:1 },
+  { id:'d:algue',     n:'Algue noire',        kind:'plant', price:25,  paint:paintAlgue,     medium:'gravure', sz:1 },
+  { id:'d:crane',     n:'Crâne',              kind:'decor', price:40,  paint:paintCrane,     medium:'gravure',    sz:.6 },
+  { id:'d:rose',      n:'Rose noire',         kind:'plant', price:45,  paint:paintRose,      medium:'gravure',   sz:.7 },
+  { id:'d:ancre',     n:'Ancre rouillée',     kind:'decor', price:55,  paint:paintAncre,     medium:'gravure',    sz:.8 },
+  { id:'d:corail',    n:'Corail d’os',        kind:'plant', price:60,  paint:paintCorail,    medium:'gravure',    sz:.9 },
+  { id:'d:anemone',   n:'Anémone vénéneuse',  kind:'plant', price:60,  paint:paintAnemone,   medium:'gravure', sz:.75 },
+  { id:'d:cage',      n:'Cage à oiseau',      kind:'decor', price:80,  paint:paintCage,      medium:'gravure',   sz:.9 },
+  { id:'d:croix',     n:'Croix de pierre',    kind:'decor', price:90,  paint:paintCroix,     medium:'gravure',    sz:1 },
+  { id:'d:chandelier',n:'Candélabre',         kind:'decor', price:120,  paint:paintChandelier,medium:'gravure',   sz:1 },
+  { id:'d:chapelle',  n:'Chapelle engloutie', kind:'decor', price:220, paint:paintChapelle,  medium:'gravure',   sz:1.4 },
+  { id:'d:epave',     n:'Épave',              kind:'decor', price:280, paint:paintEpave,     medium:'gravure',    sz:1.6 }
 ];
+
+</script>
+<script>
+/* =====================================================================
+   Gravure gothique : la direction artistique unique de Dessinarium.
+   Tout passe par la même chaîne : palette harmonisée (5 tons, ombres violettes,
+   lumières d’os), peinture mate à grain, puis contour d’encre uniforme.
+   ===================================================================== */
+const DA_INK = [18, 10, 28];
+const DA_EDGES = [.17, .36, .56, .76];                // seuils de tons (sur la valeur perçue)
+const DA_LIGHT = [.1, .24, .4, .57, .78];             // clarté HSL cible par ton
+function rgb2hsl(r, g, b){
+  r /= 255; g /= 255; b /= 255; const mx = Math.max(r, g, b), mn = Math.min(r, g, b), l = (mx + mn) / 2; let h = 0, s = 0;
+  if (mx !== mn){ const d = mx - mn; s = l > .5 ? d / (2 - mx - mn) : d / (mx + mn); h = mx === r ? (g - b) / d + (g < b ? 6 : 0) : mx === g ? (b - r) / d + 2 : (r - g) / d + 4; h *= 60; }
+  return [h, s, l];
+}
+function hsl2rgb(h, s, l){
+  h = ((h % 360) + 360) % 360 / 360; const q = l < .5 ? l * (1 + s) : l + s - l * s, p = 2 * l - q;
+  const f = t => { t = (t % 1 + 1) % 1; return t < 1 / 6 ? p + (q - p) * 6 * t : t < .5 ? q : t < 2 / 3 ? p + (q - p) * (2 / 3 - t) * 6 : p; };
+  return [f(h + 1 / 3) * 255, f(h) * 255, f(h - 1 / 3) * 255];
+}
+/* teintes de la maison : violet, prune, cramoisi, rouille, ambre, mousse, sarcelle, acier */
+const DA_HUES = [268, 300, 342, 14, 38, 92, 172, 214];
+function snapHue(h){ let best = DA_HUES[0], bd = 999; for (const x of DA_HUES){ const d = Math.min(Math.abs(h - x), 360 - Math.abs(h - x)); if (d < bd){ bd = d; best = x; } } return best; }
+/* 1) palette : toutes les couleurs rejoignent la même famille sourde et profonde */
+function harmonize(src){
+  const w = src.width, h = src.height, c = document.createElement('canvas'); c.width = w; c.height = h;
+  const g = c.getContext('2d', { willReadFrequently: true }); g.drawImage(src, 0, 0);
+  const im = g.getImageData(0, 0, w, h), d = im.data;
+  for (let i = 0; i < d.length; i += 4){
+    if (d[i + 3] < 4) continue;
+    const r = d[i], gg = d[i + 1], b = d[i + 2], Y = (.299 * r + .587 * gg + .114 * b) / 255;
+    let [H, S, L] = rgb2hsl(r, gg, b); const v = (Y + L) / 2;
+    let band = 0; while (band < 4 && v > DA_EDGES[band]) band++;
+    if (S < .1){ H = 268; S = .12 + (1 - S * 10) * .04; } else { H = snapHue(H); S = clamp(S * .72 + .06, 0, .64); }
+    if (band === 0) S *= .75; else if (band === 4) S *= .7;
+    let [R, G, B] = hsl2rgb(H, S, DA_LIGHT[band]);
+    if (band <= 1){ R = lerp(R, 42, .24); G = lerp(G, 22, .24); B = lerp(B, 72, .24); }
+    else if (band === 4){ R = lerp(R, 244, .16); G = lerp(G, 232, .16); B = lerp(B, 208, .16); }
+    d[i] = R; d[i + 1] = G; d[i + 2] = B;
+  }
+  g.putImageData(im, 0, 0); return c;
+}
+/* 3) contour d’encre : même épaisseur relative pour tout */
+function inkEdge(cv){
+  const w = cv.width, h = cv.height, t = clamp(Math.round(Math.max(w, h) * .0075), 1, 3);
+  const s = document.createElement('canvas'); s.width = w; s.height = h; const sg = s.getContext('2d');
+  for (let k = 0; k < 12; k++){ const a = k / 12 * TAU; sg.drawImage(cv, Math.cos(a) * t, Math.sin(a) * t); }
+  sg.globalCompositeOperation = 'source-in'; sg.fillStyle = `rgb(${DA_INK})`; sg.fillRect(0, 0, w, h);
+  const out = document.createElement('canvas'); out.width = w; out.height = h; const og = out.getContext('2d', { willReadFrequently: true });
+  og.drawImage(s, 0, 0); og.drawImage(cv, 0, 0); return out;
+}
+/* 2) lumière unique : une arête claire en haut à gauche, une ombre sourde en bas à droite, partout pareil */
+function rimLight(cv){
+  const w = cv.width, h = cv.height, d = clamp(Math.round(Math.max(w, h) * .011), 1, 4);
+  const edge = (dx, dy, col) => {
+    const e = document.createElement('canvas'); e.width = w; e.height = h; const g = e.getContext('2d');
+    g.drawImage(cv, 0, 0); g.globalCompositeOperation = 'destination-out'; g.drawImage(cv, dx, dy);
+    g.globalCompositeOperation = 'source-in'; g.fillStyle = col; g.fillRect(0, 0, w, h); return e;
+  };
+  const out = document.createElement('canvas'); out.width = w; out.height = h; const og = out.getContext('2d', { willReadFrequently: true });
+  og.drawImage(cv, 0, 0); og.drawImage(edge(-d, -d, 'rgba(10,4,24,.34)'), 0, 0); og.drawImage(edge(d, d, 'rgba(232,220,255,.5)'), 0, 0);
+  return out;
+}
+function gravure(src, seed = 1){ return inkEdge(rimLight(paintifyRaw(harmonize(src), 'gouache', seed))); }
 
 </script>
 <script>
@@ -1644,8 +1714,8 @@ const BRUSH_ITEMS = [
   { id:'brush:aero',      n:'Pastel',    price:200, d:'Doux, poudré, parfait pour les dégradés.' },
   { id:'brush:calli',     n:'Encre',     price:260, d:'Les pleins et les déliés d’une plume.' }
 ];
-const MEDIUM_PRICE = { natural:0, gouache:100, aquarelle:150, feutre:150, fusain:200, crayon:150 };
-const MEDIUM_DESC = { natural:'Tes dessins, exactement comme tu les as faits.', gouache:'Couleurs mates et opaques, légères traces de pinceau.', aquarelle:'Bords qui bavent, pigments granuleux, couleurs lavées.',
+const MEDIUM_PRICE = { gravure:0, natural:0, gouache:100, aquarelle:150, feutre:150, fusain:200, crayon:150 };
+const MEDIUM_DESC = { gravure:'La patte de la maison : palette sourde, ombres violettes, contour d’encre. Tout l’aquarium parle la même langue.', natural:'Tes dessins, exactement comme tu les as faits.', gouache:'Couleurs mates et opaques, légères traces de pinceau.', aquarelle:'Bords qui bavent, pigments granuleux, couleurs lavées.',
   feutre:'Couleurs vives et franches, petites rayures de feutre.', fusain:'Noir et blanc brut, grain du papier et traits estompés.', crayon:'Hachures fines et grain de crayon de couleur.' };
 const THEME_DESC = { abysses:'Noir profond et lueurs qui flottent. Le thème de départ.', brume:'Un marais gris-vert où la brume ne se lève jamais.', sang:'Une lune rouge, des braises qui montent.', amethyste:'Une nuit violette où tombent des cendres.' };
 const FLOOR_DESC = { sand:'De la cendre froide.', pebbles:'Des galets noirs et lisses.', mud:'De la vase sombre pleine de bulles.', bones:'Un sol d’ossements et de crânes.' };
@@ -1656,7 +1726,7 @@ const LAMP_PRICE = 140, SCENE_PRICE = 220;
 function initOwned(){
   const o = state.owned;
   THEMES.forEach(t => { if (t.price === 0) o.add('theme:' + t.id); }); FLOORS.forEach(f => { if (f[2] === 0) o.add('floor:' + f[0]); }); FRAMES.forEach(f => { if (f[2] === 0) o.add('frame:' + f[0]); });
-  o.add('render:natural'); o.add('theme:' + settings.theme); if (settings.floor !== 'drawn') o.add('floor:' + settings.floor); o.add('frame:' + settings.frame);
+  o.add('render:natural'); o.add('render:gravure'); o.add('theme:' + settings.theme); if (settings.floor !== 'drawn') o.add('floor:' + settings.floor); o.add('frame:' + settings.frame);
   if (state.render !== 'natural') o.add('render:' + state.render);
   if (settings.bgImg) o.add('scene:bg'); if (settings.floorImg) o.add('scene:floor');
 }
@@ -1831,14 +1901,14 @@ function seasonNow(){
 }
 let lanterns = [], lanternClock = 0, pumpkinSprite = null;
 function getPumpkin(){
-  return pumpkinSprite || (pumpkinSprite = mk(70, 70, g => {
+  return pumpkinSprite || (pumpkinSprite = gravure(mk(70, 70, g => {
     g.lineWidth = 4; g.strokeStyle = OUT; g.fillStyle = '#ff8a1f';
     g.beginPath(); g.ellipse(35, 40, 28, 23, 0, 0, TAU); g.fill(); g.stroke();
     g.fillStyle = '#ff9d3f'; g.beginPath(); g.ellipse(35, 40, 14, 22, 0, 0, TAU); g.fill(); g.stroke();
     g.fillStyle = '#4a9a3b'; g.fillRect(31, 10, 8, 10); g.strokeRect(31, 10, 8, 10);
     g.fillStyle = '#ffe36b'; g.beginPath(); g.moveTo(22, 34); g.lineTo(30, 34); g.lineTo(26, 41); g.closePath(); g.moveTo(40, 34); g.lineTo(48, 34); g.lineTo(44, 41); g.closePath(); g.fill();
     g.beginPath(); g.moveTo(24, 48); g.lineTo(30, 52); g.lineTo(35, 48); g.lineTo(40, 52); g.lineTo(46, 48); g.lineTo(44, 56); g.lineTo(26, 56); g.closePath(); g.fill();
-  }));
+  }), 11));
 }
 
 /* ---------- Visiteurs rares ---------- */
@@ -1899,7 +1969,7 @@ function visitorSprite(kind){
     g.lineWidth = 5; g.beginPath(); g.arc(336, 140, 18, .25, 1.15); g.stroke();
     g.fillStyle = 'rgba(150,120,255,.28)'; g.beginPath(); g.ellipse(300, 134, 11, 7, 0, 0, TAU); g.fill();
   });
-  return visCache[kind] = paintify(cv, kind === 'raven' ? 'gouache' : 'aquarelle', 3);
+  return visCache[kind] = paintify(cv, 'gravure', 3);
 }
 function spawnVisitor(kind){
   const sp = visitorSprite(kind), dir = Math.random() < .5 ? 1 : -1, V = VIS[kind];
@@ -1921,13 +1991,16 @@ function visitorClick(v){
 let chestSprites = null;
 function getChestSprites(){
   if (chestSprites) return chestSprites;
+  chestSprites = buildChestSprites(); chestSprites.closed = gravure(chestSprites.closed, 7); chestSprites.open = gravure(chestSprites.open, 8); return chestSprites;
+}
+function buildChestSprites(){
   const base = (g, open) => {
     g.lineWidth = 6; g.strokeStyle = OUT; g.fillStyle = '#3a2a40'; rr(g, 14, 62, 112, 60, 8); g.fill(); g.stroke();
     g.strokeStyle = 'rgba(35,40,58,.4)'; g.lineWidth = 3; for (const y of [82, 102]){ g.beginPath(); g.moveTo(18, y); g.lineTo(122, y); g.stroke(); }
     g.strokeStyle = OUT; g.lineWidth = 6; g.fillStyle = '#9e9ab8'; g.fillRect(58, 62, 24, 60); g.strokeRect(58, 62, 24, 60);
     g.fillStyle = '#6f6a8c'; g.beginPath(); g.arc(70, 92, 8, 0, TAU); g.fill(); g.stroke();
   };
-  return chestSprites = {
+  return {
     closed: mk(140, 130, g => { base(g); g.lineWidth = 6; g.strokeStyle = OUT; g.fillStyle = '#4b3654'; g.beginPath(); g.moveTo(14, 66); g.bezierCurveTo(14, 12, 126, 12, 126, 66); g.closePath(); g.fill(); g.stroke();
       g.fillStyle = '#9e9ab8'; g.fillRect(58, 26, 24, 40); g.strokeRect(58, 26, 24, 40); }),
     open: mk(140, 130, g => { g.fillStyle = '#b58cff'; g.beginPath(); g.ellipse(70, 62, 52, 14, 0, 0, TAU); g.fill(); base(g); g.fillStyle = '#c9a8ff';
@@ -2351,7 +2424,7 @@ function getShip(){
     g.fillStyle = '#e8e0cc'; g.strokeStyle = '#0c0812'; g.lineWidth = 3; g.beginPath(); g.ellipse(188, 84, 17, 15, 0, 0, TAU); g.fill(); g.stroke(); g.fillStyle = '#0c0812'; g.beginPath(); g.arc(181, 82, 3.6, 0, TAU); g.arc(195, 82, 3.6, 0, TAU); g.fill(); g.fillRect(183, 94, 10, 5);
     g.strokeStyle = '#e8e0cc'; g.lineWidth = 3.4; g.beginPath(); g.moveTo(170, 112); g.lineTo(206, 124); g.moveTo(206, 112); g.lineTo(170, 124); g.stroke();
     g.fillStyle = '#8c1a30'; g.strokeStyle = '#0c0812'; g.lineWidth = 3; g.beginPath(); g.moveTo(188, 14); g.lineTo(236, 22); g.lineTo(188, 36); g.closePath(); g.fill(); g.stroke();
-  }), 'gouache', 11));
+  }), 'gravure', 11));
 }
 function startPirates(){
   const dir = Math.random() < .5 ? 1 : -1;
@@ -2459,7 +2532,7 @@ function wraithSprite(i){
     g.fillStyle = '#b6ff9a'; g.beginPath(); g.ellipse(70, 74, 7, 10, -.2, 0, TAU); g.ellipse(100, 74, 7, 10, .2, 0, TAU); g.fill();
     g.strokeStyle = 'rgba(190,170,255,.45)'; g.lineWidth = 2.4; g.beginPath(); g.moveTo(50, 126); g.quadraticCurveTo(85, 144, 120, 126); g.moveTo(44, 160); g.quadraticCurveTo(85, 182, 126, 160); g.stroke();
   });
-  return wraithCache[i] = paintify(hueShift(base, i * 55), 'gouache', 20 + i);
+  return wraithCache[i] = paintify(hueShift(base, i * 55), 'gravure', 20 + i);
 }
 function spawnClient(manual){
   if (clientNPC || residentCount() < 1) return false;
@@ -2832,20 +2905,20 @@ function extraVisitorSprite(kind){
     g.fillStyle = '#3a1f5c'; g.beginPath(); g.moveTo(246, 78); g.quadraticCurveTo(262, 52, 292, 74); g.quadraticCurveTo(272, 66, 250, 90); g.closePath(); g.fill();
     g.fillStyle = '#9c1530'; g.beginPath(); g.arc(278, 88, 3.6, 0, TAU); g.fill(); g.strokeStyle = '#05030a'; g.lineWidth = 4; g.beginPath(); g.arc(282, 98, 7, .2, 2.6); g.stroke();
     g.strokeStyle = '#c9cfe6'; g.lineWidth = 9; g.lineCap = 'round'; g.beginPath(); g.moveTo(236, 118); g.quadraticCurveTo(272, 150, 300, 132); g.stroke();
-  }), 'aquarelle', 31);
+  }), 'gravure', 31);
   if (kind === 'octopus') return paintify(mk(330, 280, g => {
     g.lineJoin = g.lineCap = 'round'; g.strokeStyle = '#05030a';
     for (let i = 0; i < 8; i++){ const x = 100 + i * 17; for (const [w, col] of [[22, '#05030a'], [14, '#6b2a5a']]){ g.strokeStyle = col; g.lineWidth = w; g.beginPath(); g.moveTo(x, 150); g.bezierCurveTo(x - 30 + (i % 3) * 20, 200, x + 30 - (i % 2) * 40, 230, x - 20 + i * 5, 266); g.stroke(); } }
     g.lineWidth = 6; g.strokeStyle = '#05030a'; g.fillStyle = '#8a3a78'; g.beginPath(); g.ellipse(165, 100, 100, 82, 0, 0, TAU); g.fill(); g.stroke();
     g.fillStyle = 'rgba(255,255,255,.22)'; g.beginPath(); g.ellipse(125, 62, 30, 14, -.6, 0, TAU); g.fill();
     g.fillStyle = '#e8e3b8'; for (const x of [128, 202]){ g.beginPath(); g.ellipse(x, 120, 20, 22, 0, 0, TAU); g.fill(); g.lineWidth = 4; g.stroke(); g.fillStyle = '#05030a'; g.fillRect(x - 3, 106, 6, 28); g.fillStyle = '#e8e3b8'; }
-  }), 'gouache', 32);
+  }), 'gravure', 32);
   return paintify(mk(150, 110, g => {
     g.lineJoin = 'round'; g.lineWidth = 4; g.strokeStyle = 'rgba(210,225,255,.9)';
     g.fillStyle = 'rgba(230,238,255,.8)'; g.beginPath(); g.moveTo(104, 56); g.quadraticCurveTo(70, 8, 30, 36); g.quadraticCurveTo(14, 56, 30, 76); g.quadraticCurveTo(70, 104, 104, 58); g.closePath(); g.fill(); g.stroke();
     g.beginPath(); g.moveTo(104, 56); g.quadraticCurveTo(122, 28, 142, 34); g.quadraticCurveTo(134, 56, 142, 78); g.quadraticCurveTo(122, 82, 104, 56); g.fill(); g.stroke();
     g.fillStyle = '#1a1230'; g.beginPath(); g.ellipse(38, 50, 6, 8, 0, 0, TAU); g.fill(); g.beginPath(); g.ellipse(22, 62, 4, 5, 0, 0, TAU); g.fill();
-  }), 'aquarelle', 33);
+  }), 'gravure', 33);
 }
 function sirenAura(){
   for (const v of visitors){
