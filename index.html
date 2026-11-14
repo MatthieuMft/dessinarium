@@ -2930,13 +2930,14 @@ function sirenAura(){
 /* ---------- cadeaux de saison ---------- */
 let presents = [], presentClock = 20;
 function lifePointer(x, y){
+  if (viePointer(x, y)) return true;
   if (sagaPointer(x, y)) return true;
   for (const l of lanterns){ if (!l.dead && Math.hypot(x - l.x, y - l.y) < 34 + (COARSE ? 14 : 0)){ l.dead = true; addCoins(3); sparkle(l.x, l.y, 12); floatText(l.x, l.y - 14, '+3'); snd('pop'); if (Math.random() < .2){ const g = pickOne(GIFTS); addGift(g.id); toast(`La lanterne contenait : ${g.n.toLowerCase()} !`); } return true; } }
   for (const p of presents){ if (!p.dead && Math.hypot(x - p.x, y - p.y) < 36 + (COARSE ? 14 : 0)){ p.dead = true; const g = pickOne(GIFTS); addGift(g.id); sparkle(p.x, p.y, 16); confetti(p.x, p.y, 14); snd('gift'); toast(`Cadeau de Noël : ${g.n.toLowerCase()} !`); return true; } }
   return false;
 }
 function lifeUpdate(dt){
-  sagaUpdate(dt);
+  sagaUpdate(dt); vieUpdate(dt);
   for (const c of creatures){ if (c.animal) sleepTick(c, dt); }
   // décors qui réagissent aux nageurs
   const sw = creatures.filter(o => !o.anchored && !o.leaving);
@@ -2956,7 +2957,7 @@ function lifeUpdate(dt){
 }
 let lifeClock = 1;
 function drawLife(phase){
-  sagaDraw(phase);
+  sagaDraw(phase); vieDraw(phase);
   if (phase !== 'front') return;
   for (const k of inkClouds){ const u = k.t / 3.2, r = 40 + u * 130 * unit, a = (1 - u) * .8; const g = ctx.createRadialGradient(k.x, k.y, 0, k.x, k.y, r); g.addColorStop(0, `rgba(10,4,20,${a})`); g.addColorStop(1, 'rgba(10,4,20,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(k.x, k.y, r, 0, TAU); ctx.fill(); }
   for (const p of presents){
@@ -3038,7 +3039,7 @@ function grantLore(){
 }
 
 /* ---------- Bestiaire ---------- */
-const EVT_LABELS = { moon: 'Lune de sang', fog: 'Brume', storm: 'Tempête', kraken: 'Kraken', pirates: 'Pirates', client: 'Client mystérieux', school: 'Banc silencieux', chest: 'Coffre maudit', manna: 'Pluie de nourriture', jury: 'Jury des Ombres' };
+const EVT_LABELS = { moon: 'Lune de sang', fog: 'Brume', storm: 'Tempête', kraken: 'Kraken', pirates: 'Pirates', client: 'Client mystérieux', school: 'Banc silencieux', chest: 'Coffre maudit', manna: 'Pluie de nourriture', jury: 'Jury des Ombres', bottle: 'Bouteille à la mer', current: 'Grand courant', maelstrom: 'Maelström', song: 'Chant de la baleine' };
 function bestiaryDefs(){
   return [
     { g: 'Couleurs', items: COLOR_LIST.concat(['grise']).map(c => ['col:' + c, c.charAt(0).toUpperCase() + c.slice(1)]) },
@@ -3383,6 +3384,277 @@ function renderSagaPane(tab){
   } else if (tab === 'his'){
     root.appendChild(mkEl('p', 'sub sg-intro', `Fragments du journal du Gardien : ${s.lore.length}/${LORE.length}. Trouve-les dans les coffres, les rituels, le sable, le jury et en descendant plus bas.`));
     LORE.forEach((l, i) => { const ok = s.lore.includes(l.id), card = mkEl('div', 'sg-card' + (ok ? ' ok' : '')); card.appendChild(mkEl('div', 'sg-h', ok ? l.t : `Fragment ${i + 1}`)); card.appendChild(mkEl('div', ok ? 'sg-t sg-lore' : 'sg-t', ok ? l.x : 'Pas encore découvert.')); root.appendChild(card); });
+  }
+}
+
+</script>
+<script>
+/* ============ Vie : émotions, rencontres entre poissons, faune du sol, événements vivants ============ */
+let vieSpr = null;
+function vieSprites(){
+  if (vieSpr) return vieSpr;
+  const crab = mk(130, 90, g => {
+    g.lineWidth = 5; g.strokeStyle = OUT; g.fillStyle = '#b5533a';
+    for (const sg of [-1, 1]) for (let i = 0; i < 3; i++){ g.beginPath(); g.moveTo(65 + sg * 24, 56 + i * 5); g.lineTo(65 + sg * (46 + i * 4), 70 + i * 6); g.lineTo(65 + sg * (52 + i * 4), 86); g.stroke(); }
+    for (const sg of [-1, 1]){ g.beginPath(); g.moveTo(65 + sg * 30, 44); g.quadraticCurveTo(65 + sg * 52, 36, 65 + sg * 56, 22); g.stroke();
+      g.beginPath(); g.arc(65 + sg * 60, 18, 15, 0, TAU); g.fill(); g.stroke(); g.fillStyle = OUT; g.beginPath(); g.moveTo(65 + sg * 60, 18); g.lineTo(65 + sg * 74, 4); g.lineTo(65 + sg * 68, 22); g.closePath(); g.fill(); g.fillStyle = '#b5533a'; }
+    g.beginPath(); g.ellipse(65, 54, 40, 26, 0, 0, TAU); g.fill(); g.stroke();
+    g.strokeStyle = OUT; g.lineWidth = 4; for (const sg of [-1, 1]){ g.beginPath(); g.moveTo(65 + sg * 12, 36); g.lineTo(65 + sg * 12, 24); g.stroke(); g.fillStyle = '#efe6cf'; g.beginPath(); g.arc(65 + sg * 12, 22, 6, 0, TAU); g.fill(); g.stroke(); g.fillStyle = OUT; g.beginPath(); g.arc(65 + sg * 12, 22, 2.4, 0, TAU); g.fill(); }
+  });
+  const bottle = mk(80, 150, g => {
+    g.lineWidth = 5; g.strokeStyle = OUT;
+    g.fillStyle = '#8fc9d4'; rr(g, 16, 52, 48, 90, 16); g.fill(); g.stroke(); rr(g, 30, 22, 20, 36, 4); g.fill(); g.stroke();
+    g.fillStyle = '#a8794d'; rr(g, 28, 8, 24, 18, 4); g.fill(); g.stroke();
+    g.fillStyle = '#eadfc4'; g.lineWidth = 3.5; rr(g, 28, 70, 24, 56, 5); g.fill(); g.stroke(); g.strokeStyle = '#8a1830'; g.lineWidth = 3; g.beginPath(); g.moveTo(32, 86); g.lineTo(48, 86); g.moveTo(32, 98); g.lineTo(46, 98); g.moveTo(32, 110); g.lineTo(48, 110); g.stroke();
+    g.strokeStyle = 'rgba(255,255,255,.7)'; g.lineWidth = 4; g.beginPath(); g.moveTo(24, 66); g.lineTo(24, 120); g.stroke();
+  });
+  const lant = mk(100, 56, g => {
+    g.lineWidth = 4; g.strokeStyle = OUT; g.fillStyle = '#4aa0a8';
+    g.beginPath(); g.moveTo(26, 32); g.lineTo(4, 14); g.lineTo(8, 32); g.lineTo(4, 50); g.closePath(); g.fill(); g.stroke();
+    g.beginPath(); g.ellipse(52, 33, 30, 15, 0, 0, TAU); g.fill(); g.stroke();
+    g.beginPath(); g.moveTo(60, 20); g.quadraticCurveTo(74, 6, 80, 12); g.stroke(); g.fillStyle = '#ffe9a0'; g.beginPath(); g.arc(82, 13, 6, 0, TAU); g.fill(); g.stroke();
+    g.fillStyle = '#efe6cf'; g.beginPath(); g.arc(70, 30, 5, 0, TAU); g.fill(); g.stroke(); g.fillStyle = OUT; g.beginPath(); g.arc(71, 30, 2, 0, TAU); g.fill();
+  });
+  return vieSpr = { crab: gravure(crab, 41), bottle: gravure(bottle, 42), lant: gravure(lant, 43) };
+}
+
+/* ---------- émotes : de petites bulles qui disent ce que ressent chaque créature ---------- */
+function emote(c, k, dur = 2.4){ if (!c || c.emo) return; c.emo = { k, t: 0, dur }; }
+function drawEmote(c){
+  const e = c.emo, u = clamp(e.t / e.dur, 0, 1), a = u < .12 ? u / .12 : u > .8 ? (1 - u) / .2 : 1, r = 13 * unit + 7, bob = Math.sin(T0 * 3 + c.phase) * 2.5;
+  const x = c.x, y = Math.max(r + 6, c.y - c.dh * .6 - r - 10) + bob;
+  ctx.save(); ctx.globalAlpha = a; ctx.translate(x, y); ctx.scale(.7 + .3 * Math.min(1, u * 6), .7 + .3 * Math.min(1, u * 6));
+  ctx.fillStyle = 'rgba(24,14,40,.86)'; ctx.strokeStyle = 'rgba(190,160,255,.85)'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.arc(0, 0, r, 0, TAU); ctx.fill(); ctx.stroke();
+  ctx.beginPath(); ctx.arc(-r * .35, r * 1.25, 3, 0, TAU); ctx.arc(-r * .15, r * 1.75, 1.8, 0, TAU); ctx.fill();
+  ctx.lineCap = ctx.lineJoin = 'round'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; const s = r * .55;
+  if (e.k === 'heart'){ ctx.fillStyle = '#c63a5c'; ctx.beginPath(); ctx.moveTo(0, s * .8); ctx.bezierCurveTo(-s * 1.4, -s * .1, -s * .7, -s * 1.1, 0, -s * .4); ctx.bezierCurveTo(s * .7, -s * 1.1, s * 1.4, -s * .1, 0, s * .8); ctx.fill(); }
+  else if (e.k === 'note'){ ctx.fillStyle = ctx.strokeStyle = '#e6dcc4'; ctx.lineWidth = 2.2; ctx.beginPath(); ctx.ellipse(-s * .35, s * .55, s * .45, s * .32, -.4, 0, TAU); ctx.fill(); ctx.beginPath(); ctx.moveTo(s * .05, s * .45); ctx.lineTo(s * .05, -s * .9); ctx.quadraticCurveTo(s * .7, -s * .6, s * .65, -s * .1); ctx.stroke(); }
+  else if (e.k === 'skull'){ ctx.fillStyle = '#e6dcc4'; ctx.beginPath(); ctx.arc(0, -s * .15, s * .85, 0, TAU); ctx.fill(); ctx.fillRect(-s * .45, s * .3, s * .9, s * .55); ctx.fillStyle = '#180a24'; ctx.beginPath(); ctx.arc(-s * .33, -s * .1, s * .26, 0, TAU); ctx.arc(s * .33, -s * .1, s * .26, 0, TAU); ctx.fill(); }
+  else if (e.k === 'food'){ ctx.fillStyle = '#c9722b'; for (const [dx, dy] of [[-.4, .3], [.35, .2], [0, -.4]]){ ctx.beginPath(); ctx.arc(dx * s, dy * s, s * .38, 0, TAU); ctx.fill(); } }
+  else { const txt = { q: '?', excl: '!', zzz: 'Z' }[e.k] || '?'; ctx.fillStyle = e.k === 'excl' ? '#c9a24b' : e.k === 'zzz' ? '#a98bd0' : '#e6dcc4'; ctx.font = `700 ${Math.round(r * 1.25)}px Cinzel, serif`; ctx.fillText(txt, 0, 1); }
+  ctx.restore();
+}
+
+/* ---------- rencontres entre poissons ---------- */
+let moments = [], momClock = 7, emoClock = 3, ripples = [], rings = [];
+const freeFish = () => creatures.filter(c => c.type === 'fish' && !c.sch && !c.anim && !c.drag && !c.held && !c.leaving && c.fear <= 0 && c.hunger < .7);
+function endMoment(m){ for (const c of [m.a, m.b]) if (c && c.sch === 'social'){ c.sch = null; c.retarget = 0; } m.done = true; }
+function startMoment(){
+  if (moments.length >= 2) return;
+  const free = freeFish(); if (free.length < 2) return;
+  const r = Math.random(), a = pickOne(free), others = free.filter(o => o !== a);
+  if (r < .4){            // bavardage
+    let b = null, bd = 460 * unit + 120; for (const o of others){ const d = Math.hypot(o.x - a.x, o.y - a.y); if (d < bd){ bd = d; b = o; } }
+    if (!b) return; const fr = a.friend === b.id || b.friend === a.id;
+    a.sch = b.sch = 'social'; moments.push({ t: 0, dur: rand(3.6, 5), type: 'chat', a, b, ang: rand(0, TAU), fr }); emote(a, fr ? 'heart' : pickOne(['note', 'q', 'excl'])); setTimeout(() => emote(b, fr ? 'heart' : pickOne(['note', 'excl'])), 500);
+  } else if (r < .62){    // poursuite
+    const b = pickOne(others); a.sch = b.sch = 'social'; moments.push({ t: 0, dur: rand(4.5, 6.5), type: 'chase', a, b }); emote(b, 'excl'); setTimeout(() => emote(a, 'note'), 600);
+  } else if (r < .9){     // curiosité pour un décor
+    const ds = creatures.filter(d => d.anchored && d.type === 'decor'); if (!ds.length) return; const d = pickOne(ds);
+    a.sch = 'social'; moments.push({ t: 0, dur: rand(5, 6.5), type: 'decor', a, d, ang: rand(0, TAU), reacted: false }); emote(a, 'q', 1.8);
+  } else if (visitors.length){   // curiosité pour un visiteur
+    const v = pickOne(visitors); a.sch = 'social'; moments.push({ t: 0, dur: rand(4, 5.5), type: 'visit', a, v }); emote(a, 'excl', 1.8);
+  }
+}
+function updateMoments(dt){
+  for (const m of moments){
+    m.t += dt; const a = m.a, b = m.b;
+    if (!creatures.includes(a) || (b && !creatures.includes(b)) || a.drag || a.held || a.leaving || a.fear > 0 || (b && (b.drag || b.held || b.leaving || b.fear > 0))){ endMoment(m); continue; }
+    if (m.type === 'chat'){
+      m.ang += dt * 1.7; const R = 58 * unit + 20, bd = bounds(a), bb = bounds(b);
+      a.tx = clamp(b.x + Math.cos(m.ang) * R, bd.x0, bd.x1); a.ty = clamp(b.y + Math.sin(m.ang) * R * .7, bd.y0, bd.y1);
+      b.tx = clamp(a.x + Math.cos(m.ang + Math.PI) * R, bb.x0, bb.x1); b.ty = clamp(a.y + Math.sin(m.ang + Math.PI) * R * .7, bb.y0, bb.y1);
+    } else if (m.type === 'chase'){
+      const bd = bounds(a), bb = bounds(b), an = Math.atan2(b.y - a.y, b.x - a.x);
+      a.tx = b.x; a.ty = b.y; b.tx = clamp(b.x + Math.cos(an) * 220 + Math.sin(m.t * 2) * 90, bb.x0, bb.x1); b.ty = clamp(b.y + Math.sin(an) * 150 + Math.cos(m.t * 2.3) * 70, bb.y0, bb.y1);
+      if (Math.hypot(a.x - b.x, a.y - b.y) < 36 * unit + 14 && !m.tagged){ m.tagged = true; heart(a.x, a.y - a.dh * .5); emote(b, 'heart', 1.6); }
+    } else if (m.type === 'decor'){
+      if (!creatures.includes(m.d)){ endMoment(m); continue; }
+      m.ang += dt * 1.1; const d = m.d, bd = bounds(a), R = d.dw * .5 + 34 * unit;
+      a.tx = clamp(d.x + Math.cos(m.ang) * R, bd.x0, bd.x1); a.ty = clamp(d.y - d.dh * .45 + Math.sin(m.ang) * R * .5, bd.y0, bd.y1);
+      if (!m.reacted && m.t > m.dur * .55){ m.reacted = true; decorReaction(a, d); }
+    } else if (m.type === 'visit'){
+      if (!visitors.includes(m.v)){ endMoment(m); continue; }
+      const bd = bounds(a); a.tx = clamp(m.v.x + Math.cos(m.t) * 90, bd.x0, bd.x1); a.ty = clamp(m.v.y + Math.sin(m.t * 1.3) * 50 + m.v.dh * .6, bd.y0, bd.y1);
+    }
+    if (m.t >= m.dur){
+      if (m.type === 'chat'){ addLove(a, m.fr ? .9 : .4); addLove(b, m.fr ? .9 : .4); heart((a.x + b.x) / 2, (a.y + b.y) / 2 - 16); if (m.fr){ logc(a, `A papoté avec ${b.name}.`); } }
+      else if (m.type === 'chase'){ addLove(a, .3); addLove(b, .3); }
+      endMoment(m);
+    }
+  }
+  moments = moments.filter(m => !m.done);
+}
+function decorReaction(c, d){
+  const li = (c.likes || []).indexOf(d.name), hates = (c.hates || []).includes(d.name);
+  if (li >= 0){ emote(c, 'heart', 2.6); addLove(c, 1); c.known |= (li === 0 ? 1 : 4); logc(c, `A admiré : ${d.name.toLowerCase()}.`); for (let i = 0; i < 3; i++) setTimeout(() => heart(c.x + rand(-16, 16), c.y - c.dh * .5), i * 150); }
+  else if (hates){ emote(c, 'skull', 2.6); c.known |= 2; c.fear = Math.max(c.fear, .9); c.scare = { x: d.x, y: d.y - d.dh * .3 }; logc(c, `A fui : ${d.name.toLowerCase()}.`); }
+  else { emote(c, 'note', 1.8); if (Math.random() < .3) logc(c, `A inspecté : ${d.name.toLowerCase()}.`); }
+}
+
+/* ---------- faune du sol : crabes ---------- */
+let crabs = [];
+const crabY = cr => sandTop() + 16 + cr.row * Math.max(10, sandH - 34);
+function updateCrabs(dt){
+  const n = clamp(Math.round(W / 520), 1, 3); while (crabs.length < n) crabs.push({ x: rand(W * .1, W * .9), row: rand(.1, .9), dir: Math.random() < .5 ? -1 : 1, t: rand(0, 6), pause: rand(.5, 3), flee: 0, cd: rand(5, 20), mv: 0 });
+  for (const cr of crabs){
+    cr.t += dt; cr.cd = Math.max(0, cr.cd - dt); cr.mv = 0; const y = crabY(cr);
+    for (const o of creatures){ if (o.anchored || o.leaving) continue; if (Math.abs(o.x - cr.x) < 80 * unit + 20 && Math.abs(o.y - y) < 60 * unit + 40 && cr.flee <= 0){ cr.flee = .9; cr.dir = o.x < cr.x ? 1 : -1; break; } }
+    if (cr.flee > 0){ cr.flee -= dt; cr.x += cr.dir * 120 * unit * dt; cr.mv = 1; }
+    else if (cr.pause > 0) cr.pause -= dt;
+    else { cr.x += cr.dir * 22 * unit * dt; cr.mv = .5; cr.walk = (cr.walk || rand(2, 5)) - dt; if (cr.walk <= 0){ cr.walk = 0; cr.pause = rand(1, 4); if (Math.random() < .5) cr.dir = -cr.dir; } }
+    if (cr.x < 30){ cr.x = 30; cr.dir = 1; } if (cr.x > W - 30){ cr.x = W - 30; cr.dir = -1; }
+  }
+}
+function drawCrab(cr){
+  const S = vieSprites().crab, w = 50 * unit + 28, h = w * S.height / S.width, y = crabY(cr), bob = cr.mv ? Math.abs(Math.sin(cr.t * (cr.mv > .6 ? 22 : 11))) * 2.5 : 0;
+  ctx.save(); ctx.translate(cr.x, y - bob); ctx.scale(cr.dir, 1); ctx.drawImage(S, -w / 2, -h, w, h); ctx.restore();
+}
+
+/* ---------- poissons-lanternes sauvages (décor vivant, loin derrière) ---------- */
+let wildSchools = [], wildClock = 5;
+function updateWild(dt){
+  wildClock -= dt; if (wildClock <= 0 && wildSchools.length < 2){ wildClock = rand(22, 45); const dir = Math.random() < .5 ? 1 : -1, n = 5 + ((Math.random() * 4) | 0); wildSchools.push({ dir, t: 0, x: dir > 0 ? -60 : W + 60, y: rand(H * .18, Math.max(H * .3, sandTop() - 90)), sp: rand(34, 56), n, ph: rand(0, 6) }); }
+  for (const s of wildSchools){ s.t += dt; s.x += s.dir * s.sp * unit * dt; if ((s.dir > 0 && s.x > W + 200) || (s.dir < 0 && s.x < -200)) s.gone = true; }
+  wildSchools = wildSchools.filter(s => !s.gone);
+}
+function drawWild(){
+  if (!wildSchools.length) return; const S = vieSprites().lant, w = 30 * unit + 16, h = w * S.height / S.width;
+  for (const s of wildSchools) for (let i = 0; i < s.n; i++){
+    const ox = -s.dir * (i * 34 * unit + Math.sin(i * 2.1) * 16), oy = Math.sin(s.t * 1.4 + i * 1.7 + s.ph) * 18 + Math.sin(i * 3.3) * 22, x = s.x + ox, y = s.y + oy;
+    ctx.save(); ctx.globalAlpha = .55; ctx.translate(x, y); ctx.scale(s.dir, 1); ctx.rotate(Math.sin(s.t * 3 + i) * .06); ctx.drawImage(S, -w / 2, -h / 2, w, h); ctx.restore();
+    ctx.save(); ctx.globalCompositeOperation = 'lighter'; const gx = x + s.dir * w * .32, gy = y - h * .22, gr = ctx.createRadialGradient(gx, gy, 0, gx, gy, 20 * unit + 10); gr.addColorStop(0, `rgba(255,226,140,${.5 + .25 * Math.sin(s.t * 4 + i)})`); gr.addColorStop(1, 'rgba(255,226,140,0)'); ctx.fillStyle = gr; ctx.fillRect(gx - 30, gy - 30, 60, 60); ctx.restore();
+  }
+}
+
+/* ---------- bouteille à la mer ---------- */
+let bottle = null;
+const BOTTLE_MSGS = ['« Quelqu’un dessine encore, là-haut ? »', '« Ne réveille pas ce qui chante au fond. »', '« J’ai laissé ma lanterne dans la chapelle. »', '« Les perles noires se souviennent. »', '« Donne-leur des noms. »'];
+function startBottle(){
+  if (bottle) return false; const dir = Math.random() < .5 ? 1 : -1;
+  bottle = { x: dir > 0 ? -30 : W + 30, y: 34 + rand(0, 16) * unit, dir, t: 0, life: 80 }; toast('Une bouteille dérive à la surface…'); snd('chime'); sagaSeen('evt:bottle'); return true;
+}
+function openBottle(){
+  const b = bottle; bottle = null; sparkle(b.x, b.y, 22); confetti(b.x, b.y, 12); snd('fanfare'); const r = Math.random(), S = saga();
+  let txt = pickOne(BOTTLE_MSGS);
+  if (r < .3 && S.lore.length < LORE.length){ setTimeout(grantLore, 900); }
+  else if (r < .55){ if (!addMap()){ addCoins(20); txt += ' (+20 perles)'; } else txt += ' Une carte au trésor y était glissée !'; }
+  else if (r < .78){ const g = pickOne(GIFTS); addGift(g.id); txt += ` Il y avait : ${g.n.toLowerCase()}.`; }
+  else { const n = 15 + ((Math.random() * 20) | 0); addCoins(n); floatText(b.x, b.y + 20, '+' + n); txt += ` (+${n} perles)`; }
+  toast(txt);
+}
+
+/* ---------- grand courant ---------- */
+let cur = null;
+function startCurrent(){
+  if (cur) return false; cur = { t: 0, dur: rand(28, 38), dir: Math.random() < .5 ? 1 : -1, streaks: Array.from({ length: 16 }, () => ({ y: rand(.1, .95), sp: rand(.8, 1.4), len: rand(50, 130), o: rand(0, 1) })) };
+  toast('Un grand courant traverse les abysses…'); snd('rumble'); sagaSeen('evt:current');
+  for (const c of creatures) if (c.animal && c.pers === 'curieux' && Math.random() < .6) emote(c, 'excl', 2); return true;
+}
+function updateCurrent(dt){
+  if (!cur) return; cur.t += dt; const env = Math.sin(Math.PI * clamp(cur.t / cur.dur, 0, 1)) ** .6;
+  for (const c of creatures){
+    if (c.leaving || c.held || c.drag) continue;
+    if (c.anchored){ if (c.type === 'plant' || SWAY_DECOR[c.name]) c.shake = Math.max(c.shake, .45 * env); continue; }
+    const b = bounds(c); c.x = clamp(c.x + cur.dir * 30 * unit * env * dt, b.x0, b.x1); if (c.tx != null) c.tx = clamp(c.tx + cur.dir * 30 * unit * env * dt, b.x0, b.x1);
+  }
+  for (const f of foods) if (!f.dead && f.landed <= 0) f.x += cur.dir * 28 * env * dt;
+  if (Math.random() < dt * 5 * env) bubble(cur.dir > 0 ? rand(0, W * .3) : rand(W * .7, W), rand(H * .15, sandTop()), rand(1.5, 3.5), rand(10, 30));
+  if (cur.t >= cur.dur){ toast('Le courant s’apaise.'); for (const c of creatures) if (c.animal) addLove(c, .3); cur = null; }
+}
+function drawCurrent(){
+  if (!cur) return; const env = Math.sin(Math.PI * clamp(cur.t / cur.dur, 0, 1)) ** .6; ctx.save(); ctx.lineCap = 'round'; ctx.lineWidth = 2;
+  for (const s of cur.streaks){ const x = (((T0 * 240 * s.sp * cur.dir + s.o * (W + 260)) % (W + 260)) + (W + 260)) % (W + 260) - 130, y = s.y * H; ctx.strokeStyle = `rgba(214,200,255,${.22 * env})`; ctx.beginPath(); ctx.moveTo(x, y); ctx.bezierCurveTo(x - cur.dir * s.len * .3, y - 6, x - cur.dir * s.len * .6, y + 6, x - cur.dir * s.len, y); ctx.stroke(); }
+  ctx.restore();
+}
+
+/* ---------- maelström ---------- */
+let mael = null;
+function startMaelstrom(){
+  if (mael || creatures.filter(c => !c.anchored).length < 2) return false;
+  const b = { x0: W * .2, x1: W * .8, y0: H * .22, y1: Math.max(H * .4, sandTop() - 120) };
+  mael = { x: rand(b.x0, b.x1), y: rand(b.y0, b.y1), r: 56 * unit + 30, R: Math.min(320, W * .42), hp: 3, t: 0, dur: 28, a: 0 };
+  toast('Un maelström se forme ! Touche-le pour le disperser.'); snd('rumble'); sagaSeen('evt:maelstrom'); return true;
+}
+function updateMael(dt){
+  if (!mael) return; const m = mael; m.t += dt; m.a += dt * 2.2;
+  for (const c of creatures){
+    if (c.anchored || c.leaving || c.held || c.drag || c.glide > 0) continue;
+    const dx = m.x - c.x, dy = m.y - c.y, d = Math.hypot(dx, dy) || 1; if (d > m.R) continue; const f = 1 - d / m.R, b = bounds(c);
+    c.x = clamp(c.x + (dx / d * 46 * f + (-dy / d) * 40 * f) * unit * dt, b.x0, b.x1); c.y = clamp(c.y + (dy / d * 46 * f + (dx / d) * 40 * f) * unit * dt, b.y0, b.y1); c.tx = c.x; c.ty = c.y;
+    if (d < m.r * .32){ c.glide = 1.1; c.vx = rand(-320, 320); c.vy = rand(-260, 260); startAnim(c, 'tourbillon'); emote(c, 'excl', 1.8); addLove(c, -.4); for (let i = 0; i < 6; i++) bubble(c.x + rand(-12, 12), c.y + rand(-8, 8), rand(2, 5), rand(50, 100)); snd('blup'); }
+  }
+  for (const f of foods){ if (f.dead) continue; const dx = m.x - f.x, dy = m.y - f.y, d = Math.hypot(dx, dy) || 1; if (d < m.R){ f.x += dx / d * 30 * (1 - d / m.R) * dt; f.y += dy / d * 30 * (1 - d / m.R) * dt; } }
+  if (Math.random() < dt * 14) bubble(m.x + rand(-m.r, m.r), m.y + rand(-m.r, m.r), rand(1.5, 3.5), rand(20, 50));
+  if (m.t >= m.dur){ toast('Le maelström s’éteint de lui-même.'); mael = null; }
+}
+function drawMael(){
+  if (!mael) return; const m = mael, a = clamp(Math.min(m.t / 1.5, (m.dur - m.t) / 1.5, 1), 0, 1); ctx.save(); ctx.translate(m.x, m.y); ctx.globalAlpha = a;
+  const gr = ctx.createRadialGradient(0, 0, 0, 0, 0, m.R * .55); gr.addColorStop(0, 'rgba(8,2,18,.85)'); gr.addColorStop(.6, 'rgba(60,24,110,.35)'); gr.addColorStop(1, 'rgba(60,24,110,0)'); ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(0, 0, m.R * .55, 0, TAU); ctx.fill();
+  ctx.lineCap = 'round'; for (let k = 0; k < 4; k++){ ctx.strokeStyle = `rgba(${k % 2 ? '214,200,255' : '150,110,230'},${.5 - k * .05})`; ctx.lineWidth = 3.2 - k * .3; ctx.beginPath(); for (let i = 0; i <= 60; i++){ const t = i / 60, ang = m.a + k * Math.PI / 2 + t * 5.4, rr = (8 + t * m.r * 1.3) * (1 + .05 * Math.sin(T0 * 3 + k)); const x = Math.cos(ang) * rr, y = Math.sin(ang) * rr * .82; i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); } ctx.stroke(); }
+  ctx.restore();
+}
+
+/* ---------- chant de la baleine : des anneaux qui bercent l’aquarium ---------- */
+let songClock = 0;
+function updateSong(dt){
+  const w = visitors.find(v => v.kind === 'whale');
+  if (w){ songClock -= dt; if (songClock <= 0){ songClock = 2.8; rings.push({ x: w.x, y: w.y, t: 0 }); if (songClock > 0) snd('rumble'); sagaSeen('evt:song'); for (const c of creatures){ if (!c.animal || c.leaving) continue; if (Math.hypot(c.x - w.x, c.y - w.y) < 520){ addLove(c, .15); if (Math.random() < .25) emote(c, 'note', 2); } } } }
+  for (const r of rings) r.t += dt; rings = rings.filter(r => r.t < 3.2);
+}
+function drawRings(){
+  ctx.save(); ctx.lineWidth = 3;
+  for (const r of rings){ const u = r.t / 3.2; ctx.strokeStyle = `rgba(214,200,255,${(1 - u) * .45})`; ctx.beginPath(); ctx.arc(r.x, r.y, 20 + u * 520, 0, TAU); ctx.stroke(); }
+  for (const p of ripples){ const u = p.t / .9; ctx.strokeStyle = `rgba(214,200,255,${(1 - u) * .6})`; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(p.x, p.y, 6 + u * 54, 0, TAU); ctx.stroke(); }
+  ctx.restore();
+}
+
+/* ---------- pointeur ---------- */
+function viePointer(x, y){
+  if (mael && Math.hypot(x - mael.x, y - mael.y) < mael.r * 1.35 + (COARSE ? 14 : 0)){
+    mael.hp--; ripples.push({ x, y, t: 0 }); snd('pop'); sparkle(x, y, 8);
+    if (mael.hp <= 0){ const g = 14 + ((Math.random() * 14) | 0); addCoins(g); floatText(mael.x, mael.y - 20, '+' + g); sparkle(mael.x, mael.y, 36); snd('fanfare'); toast('Maelström dispersé !'); mael = null; }
+    else toast(`Encore ${mael.hp} coup${mael.hp > 1 ? 's' : ''}…`);
+    return true;
+  }
+  if (bottle && Math.hypot(x - bottle.x, y - bottle.y) < 44 * unit + 14 + (COARSE ? 14 : 0)){ openBottle(); return true; }
+  for (const cr of crabs){ if (Math.hypot(x - cr.x, y - (crabY(cr) - 14)) < 30 * unit + 16 + (COARSE ? 14 : 0)){ cr.flee = 1.1; cr.dir = x < cr.x ? 1 : -1; if (cr.cd <= 0){ cr.cd = 45; const n = 1 + ((Math.random() * 3) | 0); addCoins(n); floatText(cr.x, crabY(cr) - 30, '+' + n); snd('coin'); sparkle(cr.x, crabY(cr) - 20, 8); } else snd('pop'); return true; } }
+  if (y < sandTop() + 4){          // un appel dans l’eau : les curieux viennent, les timides sursautent
+    ripples.push({ x, y, t: 0 });
+    for (const c of creatures){ if (c.type !== 'fish' || c.leaving || c.held || c.drag || c.sch) continue; const d = Math.hypot(c.x - x, c.y - y); if (d > 240 * unit + 80) continue;
+      if (c.pers === 'curieux'){ c.tx = x; c.ty = y; c.retarget = 1.6; emote(c, 'q', 1.8); }
+      else if (c.pers === 'timide' && d < 150 * unit + 50){ c.fear = .5; c.scare = { x, y }; emote(c, 'excl', 1.5); } }
+  }
+  return false;
+}
+
+/* ---------- mise à jour et dessin ---------- */
+let vieT = 0; const vieSched = { bottle: rand(150, 260), cur: rand(500, 800), mael: rand(1100, 1600) };
+function vieUpdate(dt){
+  vieT += dt;
+  for (const c of creatures) if (c.emo){ c.emo.t += dt; if (c.emo.t >= c.emo.dur) c.emo = null; }
+  momClock -= dt; if (momClock <= 0){ momClock = rand(6, 12); startMoment(); }
+  updateMoments(dt);
+  emoClock -= dt; if (emoClock <= 0){ emoClock = rand(3, 6);
+    const list = creatures.filter(c => c.animal && !c.emo && !c.leaving && !c.anchored); const c = list.length ? pickOne(list) : null;
+    if (c){ if (c.sch === 'sleep') emote(c, 'zzz', 2.6); else if (c.hunger > .8) emote(c, 'food', 2.4); else if (c.love >= 70 && Math.random() < .35) emote(c, 'heart', 2); else if (Math.random() < .12) emote(c, 'note', 1.8); } }
+  for (const p of ripples) p.t += dt; ripples = ripples.filter(p => p.t < .9);
+  updateCrabs(dt); updateWild(dt); updateSong(dt); updateCurrent(dt); updateMael(dt);
+  if (bottle){ bottle.t += dt; bottle.x += bottle.dir * 14 * unit * dt; bottle.y = (96 + 14 * unit) + Math.sin(bottle.t * 1.4) * 6; if (bottle.t > bottle.life || bottle.x < -60 || bottle.x > W + 60) bottle = null; }
+  if (stats.play > 200){ vieSched.bottle -= dt; if (vieSched.bottle <= 0){ vieSched.bottle = rand(300, 560); startBottle(); } }
+  if (stats.play > 500){ vieSched.cur -= dt; if (vieSched.cur <= 0){ vieSched.cur = rand(900, 1300); if (!amb.storm) startCurrent(); } }
+  if (stats.play > 1100){ vieSched.mael -= dt; if (vieSched.mael <= 0){ vieSched.mael = rand(1500, 2300); startMaelstrom(); } }
+}
+function vieTrigger(k){ return k === 'bottle' ? startBottle() : k === 'current' ? startCurrent() : k === 'maelstrom' ? startMaelstrom() : false; }
+function vieDraw(phase){
+  if (phase === 'back'){ drawWild(); for (const cr of crabs) drawCrab(cr); }
+  else if (phase === 'mid'){
+    if (bottle){ const S = vieSprites().bottle, w = 34 * unit + 20, h = w * S.height / S.width; ctx.save(); ctx.translate(bottle.x, bottle.y); ctx.rotate(.9 + Math.sin(bottle.t * 1.4) * .12); ctx.drawImage(S, -w / 2, -h / 2, w, h); ctx.restore();
+      ctx.save(); ctx.globalCompositeOperation = 'lighter'; const g = ctx.createRadialGradient(bottle.x, bottle.y, 0, bottle.x, bottle.y, 46); g.addColorStop(0, `rgba(214,200,255,${.25 + .15 * Math.sin(bottle.t * 3)})`); g.addColorStop(1, 'rgba(214,200,255,0)'); ctx.fillStyle = g; ctx.fillRect(bottle.x - 50, bottle.y - 50, 100, 100); ctx.restore(); }
+  } else if (phase === 'front'){
+    drawCurrent(); drawMael(); drawRings();
+    for (const c of creatures) if (c.emo && !c.leaving) drawEmote(c);
   }
 }
 
