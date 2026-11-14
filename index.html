@@ -3089,7 +3089,8 @@ document.addEventListener('mousemove', () => { if (!document.body.classList.cont
 document.addEventListener('fullscreenchange', () => { if (!document.fullscreenElement && document.body.classList.contains('relax')) setRelax(false); });
 async function resetAll(){
   if (!(await askYesNo('Tout recommencer à zéro ? Tes habitants, tes pièces et tes achats seront effacés.', 'Tout effacer'))) return;
-  await applyState({ creatures: [] }); state.coins = 60; lists(); uiSettings(); uiCoins(); refreshUI(); applyFrame(); save(); closeModals(); toast('Nouvelle partie !');
+  try { localStorage.removeItem('dessinarium.intro'); } catch (e) {}
+  await applyState({ creatures: [] }); state.coins = 60; if (typeof showIntro === 'function') showIntro(); lists(); uiSettings(); uiCoins(); refreshUI(); applyFrame(); save(); closeModals(); toast('Nouvelle partie !');
 }
 
 function initUI(){
@@ -3130,7 +3131,7 @@ function initUI(){
    Laisse le prénom vide pour un accueil sans dédicace. */
 const DEDICACE = {
   prenom: 'Eugénie',
-  message: 'Ce monde t’appartient. Dessine ses créatures, nourris-les, et laisse les abysses prendre vie.',
+  message: 'Ces profondeurs t’attendent. Dessine les créatures qui les habitent, nourris-les, et regarde l’obscurité prendre vie.',
   signature: ''
 };
 
