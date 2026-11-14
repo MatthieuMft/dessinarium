@@ -379,6 +379,8 @@ input[type=range]{width:100%;accent-color:#a67ae8;min-width:0}
       <button class="gbtn ghost small" id="btnIntro">Revoir le message</button>
       <button class="gbtn ghost small" id="btnExport">Exporter</button>
       <button class="gbtn ghost small" id="btnImport">Importer</button>
+      <button class="gbtn ghost small" id="btnCodeCopy">Copier mon code</button>
+      <button class="gbtn ghost small" id="btnCodePaste">Coller un code</button>
       <button class="gbtn small" id="btnReset" style="--c:#6b1226">Tout recommencer</button>
     </div>
     <input type="file" id="impFile" accept=".json,application/json" hidden>
@@ -390,13 +392,26 @@ input[type=range]{width:100%;accent-color:#a67ae8;min-width:0}
   <div class="win small sheetwin">
     <div class="ribbon" id="shTitle">Fiche</div><button class="x" aria-label="Fermer">&times;</button>
     <div class="shhead"><img id="shImg" alt=""><div><div class="shname"><span id="shName"></span><button class="seg" id="shRename">Renommer</button></div><div class="sub" id="shMeta"></div></div></div>
+    <div class="sub" id="shSum" style="margin:-4px 0 10px"></div>
     <div class="gl">Affection · <span id="shTier"></span></div>
     <div class="bar"><i id="shBar"></i></div>
     <div class="sub" id="shHearts" style="letter-spacing:3px;color:#d0587a;margin-bottom:6px"></div>
     <div class="gl">Goûts</div><div class="sub" id="shLikes"></div><div class="sub" id="shHates"></div>
     <div class="btnrow" id="shActs" style="margin-top:12px"></div>
+    <div class="gl" id="shTricksLab" style="margin-top:10px">Tours (touche pour les faire)</div><div class="chips" id="shTricks"></div>
+    <div class="chips" id="shGifts" style="margin-top:8px" hidden></div>
     <div class="gl" style="margin-top:12px">Journal</div>
     <ul id="shLog"></ul>
+  </div>
+</div>
+
+<!-- Photo -->
+<div class="modal" id="photo" hidden role="dialog" aria-modal="true" aria-label="Photo">
+  <div class="win" style="width:min(940px,100%)">
+    <div class="ribbon">Photo</div><button class="x" aria-label="Fermer">&times;</button>
+    <canvas id="phCv" style="width:100%;height:auto;max-height:56vh;object-fit:contain;border-radius:8px;border:3px solid var(--edge);background:#000"></canvas>
+    <div class="chips" id="phFilters" style="margin:12px 0 4px;justify-content:center"></div>
+    <div class="btnrow"><button class="gbtn green" id="phSave">Enregistrer</button></div>
   </div>
 </div>
 
@@ -448,7 +463,7 @@ input[type=range]{width:100%;accent-color:#a67ae8;min-width:0}
             <div class="colrow"><button class="cchip" id="chip2" aria-label="Couleur secondaire" aria-pressed="false"></button><button class="gbtn ghost small" id="edSwap" title="Échanger les deux couleurs">⇄</button><input type="color" id="edColor2" aria-label="Choisir la couleur secondaire" value="#ffd24d"></div></div>
           <div class="group" id="grpSym" data-opt><div class="gl">Symétrie</div><div class="chips" id="syms"></div></div>
           <div class="group"><div class="gl">Calques</div><div id="layers"></div><div class="sub">Dessine le contour dans « Contour », puis remplis dans « Couleur ».</div></div>
-          <div class="chips"><button class="seg" id="edFlip" title="Retourne le dessin de gauche à droite">Retourner</button><button class="seg" id="edImport">Importer une image</button><input type="file" id="edFile" accept="image/*" hidden></div>
+          <div class="chips"><button class="seg" id="edGuide" title="Affiche une silhouette pour t'aider (elle n'apparaît pas dans le dessin)">Modèle</button><button class="seg" id="edFlip" title="Retourne le dessin de gauche à droite">Retourner</button><button class="seg" id="edImport">Importer une image</button><input type="file" id="edFile" accept="image/*" hidden></div>
         </div></details>
       </div>
     </div>
@@ -552,7 +567,7 @@ const COARSE = (window.matchMedia && matchMedia('(pointer:coarse)').matches) || 
 const perf = { level: COARSE ? 1 : 0, ema: 16, clock: 0, frames: 0 };
 const dprCap = () => [2, 1.5, 1][perf.level];
 const buzz = ms => { try { if (navigator.vibrate) navigator.vibrate(ms); } catch (e) {} };
-const DEFAULT_STATE = () => ({ coins: 60, owned: new Set(), cap: 0, render: 'natural', carnet: [] });
+const DEFAULT_STATE = () => ({ coins: 60, owned: new Set(), cap: 0, render: 'natural', carnet: [], gifts: {} });
 let state = DEFAULT_STATE();
 const scene = { bg:null, floor:null };
 
@@ -564,7 +579,7 @@ let creatures = [], swim = [], anchBack = [], anchFront = [], foods = [], fx = [
 const sandTop = () => H - sandH;
 const frameInset = () => FRAME_PX[settings.frame] || 0;
 const flow = () => settings.current / 100 + amb.storm * .8;
-const snd = n => { try { Snd.play(n); } catch (e) {} };
+const snd = (n, f) => { try { Snd.play(n, f); } catch (e) {} };
 const maxResidents = () => 6 + 4 * state.cap;
 const MAX_DECOR = 18;
 const residentCount = () => creatures.filter(c => !c.anchored).length;
@@ -755,14 +770,15 @@ function addCreature(o, opts = {}){
   const T = TYPES[o.type];
   const c = {
     id: o.id || ('c' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6)),
-    type: o.type, name: o.name, base: o.sprite, fixed: !!o.fixed, w: o.sprite.width, h: o.sprite.height,
+    type: o.type, name: o.name, base: o.sprite, fixed: !!o.fixed, shopId: o.shopId || null, w: o.sprite.width, h: o.sprite.height,
     png: o.png || o.sprite.toDataURL('image/png'), xp: o.xp || 0, born: o.born || Date.now(),
     animal: !!T.animal, anchored: !!T.anchored, layer: o.layer === 'front' ? 'front' : 'back', flip: !!o.flip, sz: clamp(+o.sz || 1, .4, 2.5),
     x: 0, y: 0, vx: 0, vy: 0, face: 1, dir: 1, ang: 0, wag: rand(0, 6), phase: rand(0, 6), pulseT: Math.random(), hunger: rand(.5, .9),
     boost: 0, shake: 0, retarget: 0, tx: 0, ty: 0, speed: rand(55, 85), z: Math.random(), sf: Math.random(), seed: Math.random() * 10,
     mul: 1, s: 1, dw: 0, dh: 0, drag: false, beat: 0, sch: null, cool: Date.now() + 60000, coinT: rand(10, 20), leaving: false, leaveDir: 1,
     pers: o.pers || (o.type === 'fish' ? pickOne(Object.keys(PERS)) : null), friend: o.friend || null, fear: 0, scare: null, aff: {}, joy: 0, held: false,
-    love: o.love != null ? o.love : 15, likes: o.likes || null, hates: o.hates || null, known: o.known || 0, log: o.log || [], trick: o.trick || null, trickProg: o.trickProg || 0, glide: 0, dy: 0, spinA: 0, stress: false
+    love: o.love != null ? o.love : 15, likes: o.likes || null, hates: o.hates || null, known: o.known || 0, log: o.log || [], tricks: o.tricks || (o.trick ? [o.trick] : []), trickProg: o.trickProg || 0, glide: 0, dx: 0, dy: 0, spinA: 0, stress: false,
+    st: o.st || { coins: 0, pets: 0, treats: 0, gifts: 0, hides: 0, tricks: 0, flings: 0 }, energy: .6 + Math.random() * .4, react: 0, anim: null, queue: null
   };
   c.sprite = styledSprite(c);
   c.bd = o.bd != null ? o.bd : milestonesPassed(c.born);
@@ -816,6 +832,7 @@ function addCoins(n){ state.coins += n; uiCoins(); saveSoon(); }
 function dropCoin(c){
   if (pickups.length > 40) return;
   pickups.push({ x: c.x + rand(-10, 10), y: c.y, vy: 22 + Math.random() * 12, v: Math.round(COIN_VALUE[c.level] * (c.love >= 80 ? 1.5 : 1)), rest: sandTop() + 8 + Math.random() * sandH * .35, life: 26, ph: Math.random() * 6, dead: false });
+  if (c.st) c.st.coins += pickups[pickups.length - 1].v;
 }
 function coinAt(x, y){ for (const p of pickups){ if (!p.dead && Math.hypot(x - p.x, y - p.y) < 22 + Math.min(8, p.v) + (COARSE ? 14 : 0)) return p; } return null; }
 function collectCoin(p){
@@ -855,7 +872,7 @@ function eat(c, f){
   c.joy = 3; addLove(c, .4); snd('plop'); stats.fed = (stats.fed || 0) + 1; gainXp(c, 1);
 }
 function pet(c){
-  if (c.fear > 0) calmCreature(c); petLove(c);
+  wakeCreature(c); if (c.fear > 0) calmCreature(c); petLove(c); snd('purr', PURR[c.pers] || 520);
   c.boost = 1.1; c.shake = 1; c.joy = 3;
   for (let i = 0; i < 3; i++) setTimeout(() => heart(c.x, c.y - c.dh * .45), i * 140);
 }
@@ -1008,10 +1025,12 @@ function drawBody(c, now){
       ctx.drawImage(src, 0, y0, w, hh, -w / 2 + dx, y0 - h, w, hh);
     }
   } else if (c.type === 'decor'){
-    ctx.translate(c.x, c.y); ctx.scale(c.flip ? -s : s, s); ctx.drawImage(src, -w / 2, -h);
+    ctx.translate(c.x, c.y);
+    if (c.name === 'Cage à oiseau'){ ctx.translate(0, -h * s); ctx.rotate(Math.sin(T0 * 2.4 + c.phase) * (.015 + .07 * (c.react || 0))); ctx.translate(0, h * s); }
+    ctx.scale(c.flip ? -s : s, s); ctx.drawImage(src, -w / 2, -h);
   } else if (c.type === 'fish' || c.type === 'visitor'){
     const gs = 1 + (c.beat || 0) * .25;
-    ctx.translate(c.x, c.y + (c.dy || 0)); ctx.rotate(c.ang + (c.spinA || 0)); ctx.scale(c.face * s * gs, s * gs);
+    ctx.translate(c.x + (c.dx || 0), c.y + (c.dy || 0)); ctx.rotate(c.ang + (c.spinA || 0)); ctx.scale(c.face * s * gs, s * gs);
     const sw = Math.max(2, Math.round(w / [90, 65, 45][perf.level])), amp = h * (c.type === 'visitor' ? .05 : .07) * (.45 + Math.min(1, Math.hypot(c.vx, c.vy) / 90));
     for (let x0 = 0; x0 < w; x0 += sw){
       const ww = Math.min(sw + .7, w - x0), tail = 1 - (x0 + ww / 2) / w;
@@ -1038,6 +1057,7 @@ function drawBody(c, now){
     ctx.drawImage(src, -w / 2, -h / 2);
   }
   ctx.restore();
+  if (c.type === 'decor') decorFx(c);
 }
 function drawCoin(x, y, r, a = 1){
   ctx.save(); ctx.globalAlpha = a; ctx.translate(x, y);
@@ -1149,8 +1169,8 @@ function frame(now){
 let saveTimer = 0;
 function stateObj(){
   return { v: 3, savedAt: Date.now(), settings, stats,
-    state: { coins: state.coins, owned: [...state.owned], cap: state.cap, render: state.render, carnet: state.carnet },
-    creatures: creatures.map(c => ({ id:c.id, type:c.type, name:c.name, png:c.png, xp:c.xp, born:c.born, sf:c.sf, fx:c.x / W, fy:c.y / H, layer:c.layer, flip:c.flip, sz:c.sz, bd:c.bd, fixed:c.fixed, pers:c.pers, friend:c.friend, love:c.love, likes:c.likes, hates:c.hates, known:c.known, log:c.log, trick:c.trick, trickProg:c.trickProg })) };
+    state: { coins: state.coins, owned: [...state.owned], cap: state.cap, render: state.render, carnet: state.carnet, gifts: state.gifts },
+    creatures: creatures.map(c => ({ id:c.id, type:c.type, name:c.name, png:c.shopId ? null : c.png, shopId:c.shopId, xp:c.xp, born:c.born, sf:c.sf, fx:c.x / W, fy:c.y / H, layer:c.layer, flip:c.flip, sz:c.sz, bd:c.bd, fixed:c.fixed, pers:c.pers, friend:c.friend, love:c.love, likes:c.likes, hates:c.hates, known:c.known, log:c.log, tricks:c.tricks, trickProg:c.trickProg, st:c.st })) };
 }
 function saveSoon(){ clearTimeout(saveTimer); saveTimer = setTimeout(save, 700); }
 function save(){
@@ -1174,15 +1194,17 @@ async function applyState(data){
   settings.auto = false; settings.light = clamp(+settings.light || def.light, 0, 1); settings.bubbles = clamp(settings.bubbles | 0, 0, 3);
   stats = Object.assign({ xp:0, drawn:0, fed:0, hatched:0, visits:0, chests:0, birthdays:0, maxLevel:0 }, data.stats || {});
   const s = data.state || {};
-  state = Object.assign(DEFAULT_STATE(), { coins: Number.isFinite(s.coins) ? s.coins : 60, cap: clamp(s.cap | 0, 0, 6), render: MEDIUMS.some(m => m[0] === s.render) ? s.render : 'natural', carnet: Array.isArray(s.carnet) ? s.carnet.slice(0, 60) : [] });
+  state = Object.assign(DEFAULT_STATE(), { coins: Number.isFinite(s.coins) ? s.coins : 60, cap: clamp(s.cap | 0, 0, 6), render: MEDIUMS.some(m => m[0] === s.render) ? s.render : 'natural', carnet: Array.isArray(s.carnet) ? s.carnet.slice(0, 60) : [], gifts: s.gifts && typeof s.gifts === 'object' ? s.gifts : {} });
   state.owned = new Set(Array.isArray(s.owned) ? s.owned : []); initOwned();
   scene.bg = scene.floor = null;
   for (const k of ['bg', 'floor']) if (settings[k + 'Img']){ const im = await loadImg(settings[k + 'Img']); if (im) scene[k] = copyCanvas(im); else settings[k + 'Img'] = null; }
   for (const o of (data.creatures || [])){
     if (!TYPES[o.type] || TYPES[o.type].scene) continue;
-    const im = await loadImg(o.png); if (!im) continue;
-    const cv = document.createElement('canvas'); cv.width = im.width; cv.height = im.height; cv.getContext('2d', { willReadFrequently: true }).drawImage(im, 0, 0);
-    addCreature({ id:o.id, type:o.type, name:String(o.name || '').slice(0, 18) || TYPES[o.type].label, sprite:cv, png:o.png, xp:o.xp | 0, born:o.born, sf:o.sf, fx:o.fx, fy:o.fy, layer:o.layer, flip:o.flip, sz:o.sz, bd:o.bd, fixed:o.fixed, pers:o.pers, friend:o.friend, love:o.love, likes:o.likes, hates:o.hates, known:o.known, log:o.log, trick:o.trick, trickProg:o.trickProg });
+    const dd = o.shopId && DECORS.find(x => x.id === o.shopId);
+    let cv, png = o.png;
+    if (dd){ cv = paintify(spriteFrom(dd.paint()), dd.medium, hashStr(dd.id)); png = cv.toDataURL('image/png'); o.fixed = true; }
+    else { const im = await loadImg(o.png); if (!im) continue; cv = document.createElement('canvas'); cv.width = im.width; cv.height = im.height; cv.getContext('2d', { willReadFrequently: true }).drawImage(im, 0, 0); }
+    addCreature({ shopId:o.shopId, id:o.id, type:o.type, name:String(o.name || '').slice(0, 18) || TYPES[o.type].label, sprite:cv, png:png, xp:o.xp | 0, born:o.born, sf:o.sf, fx:o.fx, fy:o.fy, layer:o.layer, flip:o.flip, sz:o.sz, bd:o.bd, fixed:o.fixed, pers:o.pers, friend:o.friend, love:o.love, likes:o.likes, hates:o.hates, known:o.known, log:o.log, tricks:o.tricks, trick:o.trick, trickProg:o.trickProg, st:o.st });
   }
   for (const c of creatures) if (c.friend && !creatures.some(o => o.id === c.friend)) c.friend = null;
   if (W){ buildBg(); buildGlass(); }
@@ -1537,7 +1559,7 @@ const DECORS = [
 /* =====================================================================
    Dessinarium — boutique : catalogue, prix, achats, aperçus
    ===================================================================== */
-const SHOP_TABS = [['themes', 'Thèmes'], ['floors', 'Sols'], ['frames', 'Cadres'], ['decor', 'Décors'], ['brushes', 'Matières'], ['render', 'Rendu'], ['more', 'Plus']];
+const SHOP_TABS = [['themes', 'Thèmes'], ['floors', 'Sols'], ['frames', 'Cadres'], ['decor', 'Décors'], ['brushes', 'Matières'], ['gifts', 'Cadeaux'], ['render', 'Rendu'], ['more', 'Plus']];
 const BRUSH_ITEMS = [
   { id:'brush:aquarelle', n:'Aquarelle', price:80,  d:'Des lavis transparents qui se superposent.' },
   { id:'brush:texture',   n:'Fusain',    price:140, d:'Un trait sombre et granuleux, qu’on peut estomper.' },
@@ -1579,7 +1601,7 @@ function purchase(id, price){
 }
 function placeDecor(d){
   const sp = spriteFrom(d.paint()), styled = paintify(sp, d.medium, hashStr(d.id) + ((Math.random() * 60) | 0));
-  addCreature({ type: d.kind, name: d.n, sprite: styled, fixed: true, sz: d.sz }, { spawn: true });
+  addCreature({ type: d.kind, name: d.n, sprite: styled, fixed: true, sz: d.sz, shopId: d.id }, { spawn: true });
 }
 
 /* ---------- aperçus (générés petit à petit pour ne pas figer l'écran) ---------- */
@@ -1623,6 +1645,8 @@ function shopItems(tab){
   else if (tab === 'render') MEDIUMS.forEach(([k, n]) => { const id = 'render:' + k, own = owns(id);
     out.push({ id, name: n, desc: MEDIUM_DESC[k], price: MEDIUM_PRICE[k], own, active: state.render === k, img: fishThumb(k),
       act: () => { if (!own && !purchase(id, MEDIUM_PRICE[k])) return; state.render = k; toast('Tes habitants sont repeints…'); setTimeout(() => { applyRender(); saveSoon(); uiShopRefresh(); }, 40); } }); });
+  else if (tab === 'gifts') GIFTS.forEach(g => out.push({ id: g.id, name: g.n, desc: `Plaît à qui aime : ${g.taste}. Tu en as ${giftCount(g.id)}.`, price: g.price, own: false, consumable: true, css: 'linear-gradient(#3a2358,#150d24)', glyph: 'i-bag',
+    act: () => { if (!spend(g.price)) return; addGift(g.id); snd('gift'); toast(`${g.n} ajouté à ton inventaire.`); uiShopRefresh(); } }));
   else if (tab === 'more'){
     const cap = state.cap, full = cap >= CAP_PRICES.length;
     out.push({ id: 'up:cap', name: 'Agrandir les abysses', desc: full ? 'Ton aquarium est au maximum.' : `Habitants : ${residentCount()} sur ${maxResidents()}. Chaque agrandissement ajoute 4 places.`, price: full ? 0 : CAP_PRICES[cap], own: false, consumable: true, full, css: 'linear-gradient(#ffd98a,#ff9f5a)', glyph: '+4',
@@ -1687,7 +1711,7 @@ const Snd = {
     g.gain.setValueAtTime(0, start); g.gain.linearRampToValueAtTime(vol, start + att); g.gain.exponentialRampToValueAtTime(.0001, start + dur);
     o.connect(g); g.connect(dest); o.start(start); o.stop(start + dur + .05); return o;
   },
-  play(n){
+  play(n, f){
     if (!this.ctx || !settings.sfx || this.ctx.state !== 'running') return;
     const t = this.ctx.currentTime, d = this.fxg;
     if (n === 'plop'){ this.tone(520, t, .09, 'sine', .16, d).frequency.exponentialRampToValueAtTime(180, t + .09); }
@@ -1698,6 +1722,11 @@ const Snd = {
     else if (n === 'cannon'){ const o = this.tone(120, t, .5, 'square', .14, d, .003); o.frequency.exponentialRampToValueAtTime(40, t + .45); }
     else if (n === 'rumble'){ this.tone(38, t, 2.6, 'sine', .22, d, .4); this.tone(52, t + .2, 2.4, 'triangle', .08, d, .5); }
     else if (n === 'wisp'){ this.tone(988, t, .5, 'sine', .06, d, .01); this.tone(1318, t + .08, .6, 'sine', .05, d, .01); }
+    else if (n === 'purr'){ const q = f || 520, o = this.tone(q, t, .35, 'triangle', .07, d, .04); o.frequency.linearRampToValueAtTime(q * 1.25, t + .3); }
+    else if (n === 'gift'){ [784, 988, 1319].forEach((q, i) => this.tone(q, t + i * .07, .5, 'sine', .08, d, .005)); }
+    else if (n === 'siren'){ this.tone(392, t, 2.4, 'sine', .07, d, .4); this.tone(466, t + .9, 2.4, 'sine', .06, d, .4); }
+    else if (n === 'blob'){ const o = this.tone(180, t, .4, 'sine', .12, d, .01); o.frequency.exponentialRampToValueAtTime(70, t + .35); }
+    else if (n === 'pop'){ this.tone(900, t, .12, 'triangle', .08, d, .003); }
     else if (n === 'coin'){ this.tone(1318, t, .12, 'square', .05, d, .004); this.tone(1976, t + .07, .25, 'square', .05, d, .004); }
     else if (n === 'sparkle'){ for (let i = 0; i < 6; i++) this.tone(1200 + Math.random() * 1400, t + i * .06, .35, 'sine', .06, d, .005); }
   },
@@ -1740,11 +1769,15 @@ const VIS = {
   raven: { label:'un corbeau',            size:150, speed:95, high:true },
   manta: { label:'une raie noire',        size:250, speed:44 },
   whale: { label:'une baleine spectrale', size:330, speed:26 },
-  angler: { label:'une baudroie', size:210, speed:36 }
+  angler: { label:'une baudroie', size:210, speed:36 },
+  siren: { label:'une sirène noire', size:240, speed:38 },
+  octopus: { label:'une pieuvre géante', size:270, speed:26 },
+  ghost: { label:'un banc de fantômes', size:70, speed:60 }
 };
 const visCache = {};
 function visitorSprite(kind){
   if (visCache[kind]) return visCache[kind];
+  if (kind === 'siren' || kind === 'octopus' || kind === 'ghost') return visCache[kind] = extraVisitorSprite(kind);
   let cv;
   if (kind === 'raven') cv = mk(330, 190, g => {
     g.lineWidth = 6; g.strokeStyle = '#0c0812'; g.fillStyle = '#1b1426';
@@ -1800,8 +1833,9 @@ function spawnVisitor(kind){
 }
 function visitorClick(v){
   if (v.clicked){ heart(v.x, v.y - v.dh * .4); return; }
-  v.clicked = true; bump('visits'); { const gain = 6 + ((Math.random() * 8) | 0); addCoins(gain); fx.push({ k:'x', x:v.x, y:v.y - v.dh * .3, vy:30, life:1.2, max:1.2, text:'+' + gain }); } sparkle(v.x, v.y, 20); for (let i = 0; i < 4; i++) setTimeout(() => heart(v.x + rand(-40, 40), v.y - v.dh * .3), i * 150);
-  for (let i = 0; i < 3; i++) setTimeout(() => dropFood(clamp(v.x + rand(-80, 80), 30, W - 30), 20), i * 300);
+  v.clicked = true; bump('visits'); { const gain = v.kind === 'ghost' ? 2 : v.kind === 'octopus' ? 10 + ((Math.random() * 6) | 0) : 6 + ((Math.random() * 8) | 0); addCoins(gain); fx.push({ k:'x', x:v.x, y:v.y - v.dh * .3, vy:30, life:1.2, max:1.2, text:'+' + gain }); } sparkle(v.x, v.y, 20); for (let i = 0; i < 4; i++) setTimeout(() => heart(v.x + rand(-40, 40), v.y - v.dh * .3), i * 150);
+  if (v.kind !== 'ghost') for (let i = 0; i < 3; i++) setTimeout(() => dropFood(clamp(v.x + rand(-80, 80), 30, W - 30), 20), i * 300);
+  if (v.kind === 'octopus') inkCloud(v.x, v.y);
   snd('sparkle'); toast(`${VIS[v.kind].label.replace(/^./, m => m.toUpperCase())} te salue et laisse des perles !`);
 }
 
@@ -1875,7 +1909,9 @@ function manna(){
 }
 function triggerEvent(k, manual){
   let ok = true;
-  if (k === 'visitor'){ const kind = pickOne(Object.keys(VIS)); spawnVisitor(kind); toast(`Un visiteur surgit : ${VIS[kind].label}…`); snd('chime'); }
+  if (k === 'visitor'){ const kind = pickOne(Object.keys(VIS));
+    if (kind === 'ghost'){ for (let i = 0; i < 8; i++){ const gv = spawnVisitor('ghost'); gv.x -= gv.dir * i * 46; gv.by += rand(-70, 70); } } else spawnVisitor(kind);
+    if (kind === 'siren') snd('siren'); toast(`Un visiteur surgit : ${VIS[kind].label}…`); snd('chime'); }
   else if (k === 'school') ok = startSchool(manual);
   else if (k === 'chest'){ ok = spawnChest(); if (!ok && manual) toast('Un coffre attend déjà d’être ouvert.'); }
   else if (k === 'manna') manna();
@@ -2385,6 +2421,7 @@ function eventsPointer(x, y){
   for (const w of wisps) if (!w.dead && Math.hypot(x - w.x, y - w.y) < 34 + (COARSE ? 16 : 0)){ collectWisp(w); return true; }
   if (evt.kraken) for (const t of evt.kraken.tent){ if (t.state !== 'gone' && t.delay <= 0 && hitTentacle(t, x, y)){ strikeTentacle(t, x, y); return true; } }
   if (evt.pirates) for (const h of evt.pirates.hooks){ if ((h.state === 'down' || h.state === 'up') && distToSeg(x, y, h.ax, h.ay, h.x, h.y) < (COARSE ? 34 : 22)){ cutHook(h); return true; } }
+  if (lifePointer(x, y)) return true;
   return false;
 }
 
@@ -2401,7 +2438,7 @@ function eventsTrigger(k, manual){
   return false;
 }
 function eventsUpdate(dt){
-  bondUpdate(dt);
+  bondUpdate(dt); lifeUpdate(dt);
   const sm = Math.min(1, dt * .8);
   amb.moon += ((evt.moon && evt.moon.t < evt.moon.dur - 7 ? 1 : 0) - amb.moon) * sm;
   amb.fog += ((evt.fog && evt.fog.t < evt.fog.dur - 7 ? 1 : 0) - amb.fog) * sm;
@@ -2424,6 +2461,7 @@ function eventsUpdate(dt){
   }
 }
 function drawEvents(phase){
+  drawLife(phase);
   if (phase === 'back'){ drawMoon(); if (evt.kraken) drawCthulhuHead(evt.kraken); }
   else if (phase === 'mid'){ if (evt.kraken) evt.kraken.tent.forEach(t => { if (t.state !== 'gone' && t.delay <= 0) drawTentacle(t); }); drawClient(); }
   else if (phase === 'front'){ drawFogAndWisps(); drawStormFront(); drawPirates(); }
@@ -2435,14 +2473,30 @@ function drawEvents(phase){
 'use strict';
 /* =====================================================================
    Dessinarium — lien avec chaque créature
-   affection, goûts et dégoûts, journal, tours, cache-cache, lancer, fiche
+   affection, goûts et dégoûts, journal, cadeaux, tours et spectacle,
+   cache-cache, lancer, fiche
    ===================================================================== */
 const TASTE_EVENTS = ['la pleine lune', 'l’orage', 'la brume', 'la compagnie'];
-const TRICKS = { pirouette: 'Pirouette', saut: 'Grand saut', coeur: 'Pluie de cœurs' };
+const TRICKS = { pirouette: 'Pirouette', saut: 'Grand saut', coeur: 'Pluie de cœurs', tourbillon: 'Tourbillon', bulles: 'Couronne de bulles', danse: 'Danse', salto: 'Salto' };
+const TRICK_DUR = { pirouette: 1, saut: 1.2, coeur: 1.3, tourbillon: 2, bulles: 1.4, danse: 2, salto: 1.3 };
 const TIERS = [[0, 'Méfiante'], [25, 'Curieuse'], [50, 'Apprivoisée'], [75, 'Confiante'], [95, 'Fidèle']];
-let sheetCreature = null;
+const PURR = { timide: 560, curieux: 700, gourmand: 440, solitaire: 380 };
+const PH = {
+  tier: {
+    25: ['S’intéresse à toi.', 'Commence à te remarquer.', 'Ose un regard vers ta main.'],
+    50: ['Se laisse apprivoiser.', 'Accepte tes caresses.', 'Ne fuit plus quand tu approches.'],
+    75: ['Te fait confiance.', 'Te suit dès que tu bouges.', 'Nage près de toi sans crainte.'],
+    95: ['Te serait fidèle jusqu’au fond des abysses.', 'Est devenue inséparable de toi.']
+  },
+  found: ['A joué à cache-cache et s’est fait trouver.', 'S’est trahie en riant derrière un décor.', 'N’a pas tenu longtemps cachée.'],
+  timeout: ['A réussi à rester cachée.', 'A gagné à cache-cache.', 'Est restée introuvable.'],
+  fear: ['A eu très peur.', 'S’est réfugiée au fond, tremblante.', 'A cru sa dernière heure venue.'],
+  level: ['Est devenue', 'A atteint le stade', 'A grandi : désormais']
+};
+let sheetCreature = null, sheetGifts = false;
 
 const tierOf = v => { let t = TIERS[0][1]; for (const [m, n] of TIERS) if (v >= m) t = n; return t; };
+const bumpSt = (c, k, n = 1) => { if (!c.st) c.st = { coins: 0, pets: 0, treats: 0, gifts: 0, hides: 0, tricks: 0, flings: 0 }; c.st[k] = (c.st[k] || 0) + n; };
 function logc(c, txt){ if (!c.log) c.log = []; c.log.unshift({ d: Date.now(), t: txt }); if (c.log.length > 25) c.log.length = 25; }
 function assignTastes(c){
   if (!c.log) c.log = [];
@@ -2466,13 +2520,13 @@ function addLove(c, n){
 }
 function tierUp(c, m){
   toast(m === 25 ? `${c.name} s’intéresse à toi.` : m === 50 ? `${c.name} se laisse apprivoiser.` : m === 75 ? `${c.name} te fait confiance.` : `${c.name} t’est fidèle.`);
-  logc(c, `Affection : ${tierOf(c.love).toLowerCase()}.`);
+  logc(c, pickOne(PH.tier[m]));
   for (let i = 0; i < 3; i++) setTimeout(() => heart(c.x, c.y - c.dh * .5), i * 150);
   const reveal = [[25, 1, `Aime ${c.likes[0]}.`], [50, 2, `Déteste ${c.hates[0]}.`], [75, 4, `Aime aussi ${c.likes[1]}.`]].find(r => r[0] === m);
   if (reveal && !(c.known & reveal[1])){ c.known |= reveal[1]; logc(c, reveal[2]); }
   renderSheet(); saveSoon();
 }
-function petLove(c){ const n = Date.now(); if (n - (c.lastPet || 0) < 4000) return; c.lastPet = n; addLove(c, 2); }
+function petLove(c){ const n = Date.now(); if (n - (c.lastPet || 0) < 4000) return; c.lastPet = n; addLove(c, 2); bumpSt(c, 'pets'); }
 
 /* ---------- goûts, évalués chaque seconde ---------- */
 function tasteHit(c, t){
@@ -2498,43 +2552,62 @@ function bondTick(){
   if (sheetCreature && !$('#sheet').hidden) renderSheet();
 }
 
+/* ---------- cadeaux ---------- */
+function giveGift(c, g){
+  if (!giftCount(g.id)) return; state.gifts[g.id]--; bumpSt(c, 'gifts'); saveSoon();
+  let d = 4, msg = `${c.name} accepte ${g.n.toLowerCase()}.`;
+  const li = (c.likes || []).indexOf(g.taste);
+  if (li >= 0){ d = 12; msg = `${c.name} adore ${g.n.toLowerCase()} !`; c.known |= (li === 0 ? 1 : 4); logc(c, `A adoré ${g.n.toLowerCase()}.`); for (let i = 0; i < 5; i++) setTimeout(() => heart(c.x + rand(-20, 20), c.y - c.dh * .5), i * 110); snd('gift'); }
+  else if ((c.hates || []).includes(g.taste)){ d = -8; msg = `${c.name} déteste ${g.n.toLowerCase()}…`; c.known |= 2; c.fear = Math.max(c.fear, 1); c.scare = { x: c.x - 40, y: c.y }; logc(c, `A détesté ${g.n.toLowerCase()}.`); }
+  else { logc(c, `A reçu ${g.n.toLowerCase()}.`); heart(c.x, c.y - c.dh * .5); snd('gift'); }
+  toast(msg); addLove(c, d); renderSheet();
+}
+
 /* ---------- cache-cache ---------- */
 function startHide(c){
   const spots = creatures.filter(o => o.anchored);
   if (!spots.length){ toast('Il n’y a nulle part où se cacher. Ajoute un décor.'); return false; }
   if (!cdOK(c, 'hide', 60)) return false;
-  const s = pickOne(spots); c.hide = { spot: s, until: T0 + 30, ox: rand(-.25, .25) * s.dw }; c.sch = 'hide'; c.fear = 0;
+  wakeCreature(c); const s = pickOne(spots); c.hide = { spot: s, until: T0 + 30, ox: rand(-.25, .25) * s.dw }; c.sch = 'hide'; c.fear = 0;
   closeModals(); toast(`${c.name} se cache. Trouve-la en touchant l’aquarium !`); return true;
 }
 function endHide(c, found){
   c.hide = null; c.sch = null; c.retarget = 0;
-  if (found === 'found'){ addLove(c, 6); addCoins(2); floatText(c.x, c.y - c.dh * .6, '+2'); heart(c.x, c.y - c.dh * .5); snd('chime'); toast(`Trouvée ! ${c.name} est ravie.`); logc(c, 'A joué à cache-cache et s’est fait trouver.'); }
-  else if (found === 'timeout'){ addLove(c, 2); toast(`${c.name} sort fièrement de sa cachette.`); logc(c, 'A réussi à rester cachée.'); }
+  if (found === 'found'){ addLove(c, 6); addCoins(2); bumpSt(c, 'hides'); floatText(c.x, c.y - c.dh * .6, '+2'); heart(c.x, c.y - c.dh * .5); snd('chime'); toast(`Trouvée ! ${c.name} est ravie.`); logc(c, pickOne(PH.found)); }
+  else if (found === 'timeout'){ addLove(c, 2); toast(`${c.name} sort fièrement de sa cachette.`); logc(c, pickOne(PH.timeout)); }
 }
 const foundHide = c => endHide(c, 'found');
 
-/* ---------- tours ---------- */
+/* ---------- tours et spectacle ---------- */
 function doTrain(c){
-  if (c.trick || c.love < 50) return; if (!cdOK(c, 'train', 25)) return;
+  const n = (c.tricks || []).length; if (n >= 4 || c.love < 50 + 10 * n) return; if (!cdOK(c, 'train', 25)) return;
   if (c.hunger > .7){ toast(`${c.name} a trop faim pour apprendre.`); return; }
   c.trickProg++; addLove(c, 1);
-  if (c.trickProg >= 3){ c.trick = pickOne(Object.keys(TRICKS)); toast(`${c.name} a appris : ${TRICKS[c.trick].toLowerCase()} !`); logc(c, `A appris un tour : ${TRICKS[c.trick].toLowerCase()}.`); confetti(c.x, c.y, 14); snd('fanfare'); }
-  else toast(`${c.name} y est presque… (${c.trickProg}/3)`);
+  if (c.trickProg >= 3){
+    const free = Object.keys(TRICKS).filter(k => !c.tricks.includes(k)), t = pickOne(free); c.tricks.push(t); c.trickProg = 0;
+    toast(`${c.name} a appris : ${TRICKS[t].toLowerCase()} !`); logc(c, `A appris un tour : ${TRICKS[t].toLowerCase()}.`); confetti(c.x, c.y, 14); snd('fanfare');
+  } else toast(`${c.name} y est presque… (${c.trickProg}/3)`);
   renderSheet(); saveSoon();
 }
-function doTrick(c){
-  if (!c.trick || !cdOK(c, 'trick', 8)) return; closeModals();
-  if (c.trick === 'pirouette'){ c.spinT = 0; c.spinning = true; }
-  else if (c.trick === 'saut'){ c.jumpT = 0; c.jumping = true; for (let i = 0; i < 6; i++) bubble(c.x + rand(-10, 10), c.y + 8, rand(2, 5), rand(50, 90)); }
-  else for (let i = 0; i < 9; i++) setTimeout(() => heart(c.x + rand(-34, 34), c.y - c.dh * .5), i * 110);
-  addLove(c, 1); snd('chime');
-  if (Date.now() - (c.cd.trickR || 0) > 30000){ c.cd.trickR = Date.now(); addCoins(2); floatText(c.x, c.y - c.dh * .9, '+2'); }
+function startAnim(c, type){
+  c.anim = { type, t: 0, dur: TRICK_DUR[type] || 1.2, ev: 0 };
+  if (type === 'saut' || type === 'salto') for (let i = 0; i < 6; i++) bubble(c.x + rand(-10, 10), c.y + 8, rand(2, 5), rand(50, 90));
+}
+function doTrick(c, type){
+  if (!(c.tricks || []).includes(type) || !cdOK(c, 'trick', 6)) return; wakeCreature(c); closeModals();
+  startAnim(c, type); addLove(c, 1); bumpSt(c, 'tricks'); snd('chime'); rewardTrick(c);
+}
+function rewardTrick(c){ if (Date.now() - (c.cd.trickR || 0) > 30000){ c.cd.trickR = Date.now(); addCoins(2); floatText(c.x, c.y - c.dh * .9, '+2'); } }
+function doShow(c){
+  const list = (c.tricks || []).slice(); if (list.length < 2 || !cdOK(c, 'show', 60)) return; wakeCreature(c); closeModals();
+  c.queue = list.slice(1); startAnim(c, list[0]); addLove(c, 2); bumpSt(c, 'tricks', list.length); snd('fanfare');
+  addCoins(list.length * 2); floatText(c.x, c.y - c.dh * .9, '+' + list.length * 2); logc(c, `A donné un spectacle de ${list.length} tours.`); toast(`${c.name} donne un spectacle !`);
 }
 
 /* ---------- lancer ---------- */
 function flingCreature(c, vx, vy){
   if (c.type === 'sub' || c.anchored || c.leaving) return;
-  const k = Math.min(1, 950 / Math.hypot(vx, vy)); c.vx = vx * k; c.vy = vy * k; c.glide = 1.3; c.drag = false;
+  wakeCreature(c); const k = Math.min(1, 950 / Math.hypot(vx, vy)); c.vx = vx * k; c.vy = vy * k; c.glide = 1.3; c.drag = false; bumpSt(c, 'flings');
   if (c.pers === 'curieux' || c.pers === 'gourmand'){ addLove(c, .6); c.joy = 3; }
   else if (c.pers === 'timide' || c.pers === 'solitaire'){ addLove(c, -2); c.fear = Math.max(c.fear, 1.5); c.scare = { x: c.x - vx, y: c.y - vy }; }
   else addLove(c, -.5);
@@ -2552,8 +2625,17 @@ function bondUpdate(dt){
       if (Math.abs(c.vx) > 10) c.dir = Math.sign(c.vx); c.wag += dt * 14;
       if (c.glide <= 0){ c.retarget = 0; c.tx = c.x; c.ty = c.y; }
     }
-    if (c.spinning){ c.spinT += dt; c.spinA = clamp(c.spinT, 0, 1) * TAU; if (c.spinT >= 1){ c.spinning = false; c.spinA = 0; } }
-    if (c.jumping){ c.jumpT += dt; c.dy = -Math.sin(clamp(c.jumpT / 1.2, 0, 1) * Math.PI) * 110 * unit; if (c.jumpT >= 1.2){ c.jumping = false; c.dy = 0; for (let i = 0; i < 6; i++) bubble(c.x + rand(-12, 12), c.y, rand(2, 5), rand(50, 90)); } }
+    if (c.anim){
+      const a = c.anim; a.t += dt; const u = clamp(a.t / a.dur, 0, 1), k = unit; c.dx = 0; c.dy = 0; c.spinA = 0;
+      if (a.type === 'pirouette') c.spinA = u * TAU;
+      else if (a.type === 'saut') c.dy = -Math.sin(u * Math.PI) * 110 * k;
+      else if (a.type === 'salto'){ c.dy = -Math.sin(u * Math.PI) * 95 * k; c.spinA = u * TAU; }
+      else if (a.type === 'tourbillon'){ c.dx = Math.sin(u * TAU * 2) * 38 * k; c.dy = (Math.cos(u * TAU * 2) - 1) * 24 * k - u * 40 * k; c.spinA = u * TAU * 2; }
+      else if (a.type === 'danse'){ c.dx = Math.sin(u * TAU * 3) * 46 * k; c.spinA = Math.sin(u * TAU * 3) * .35; }
+      else if (a.type === 'coeur'){ a.ev -= dt; if (a.ev <= 0){ a.ev = .12; heart(c.x + rand(-34, 34), c.y - c.dh * .5); } }
+      else if (a.type === 'bulles'){ a.ev -= dt; if (a.ev <= 0){ a.ev = .06; const an = u * TAU * 2.2; bubble(c.x + Math.cos(an) * 42 * k, c.y + Math.sin(an) * 30 * k, rand(3, 5), rand(15, 30)); } }
+      if (a.t >= a.dur){ c.anim = null; c.dx = c.dy = c.spinA = 0; if (c.queue && c.queue.length) startAnim(c, c.queue.shift()); }
+    }
     if (c.hide){
       const s = c.hide.spot;
       if (!creatures.includes(s) || c.fear > 0 || T0 > c.hide.until){ endHide(c, T0 > c.hide.until && creatures.includes(s) ? 'timeout' : ''); continue; }
@@ -2563,13 +2645,15 @@ function bondUpdate(dt){
 }
 
 /* ---------- fiche de créature ---------- */
-function openSheet(c){ sheetCreature = c; deselect(); renderSheet(); openModal('sheet'); renderSheet(); }
+function openSheet(c){ sheetCreature = c; sheetGifts = false; deselect(); renderSheet(); openModal('sheet'); renderSheet(); }
 const dateTxt = t => { const d = Math.floor((Date.now() - t) / 86400000); return d < 1 ? 'Aujourd’hui' : d === 1 ? 'Hier' : `Il y a ${d} j`; };
 function renderSheet(){
-  const c = sheetCreature, box = $('#sheet'); if (!box || box.hidden && !c) return;
+  const c = sheetCreature, box = $('#sheet'); if (!box || (box.hidden && !c)) return;
   if (!c || !creatures.includes(c)){ if (!box.hidden) closeModals(); sheetCreature = null; return; }
   $('#shTitle').textContent = 'Fiche'; $('#shImg').src = c.png; $('#shName').textContent = c.name;
-  $('#shMeta').textContent = `${STAGES[c.level]} · ${PERS[c.pers] || TYPES[c.type].label} · ${moodText(c)}`;
+  $('#shMeta').textContent = `${STAGES[c.level]} · ${PERS[c.pers] || TYPES[c.type].label} · ${c.sch === 'sleep' ? 'endormie' : moodText(c)}`;
+  const st = c.st || {}, days = Math.floor((Date.now() - c.born) / 86400000), nT = (c.tricks || []).length;
+  $('#shSum').textContent = `${days < 1 ? 'Arrivée aujourd’hui' : days + ' jour' + (days > 1 ? 's' : '') + ' dans les abysses'} · ${st.coins || 0} perles rapportées · ${nT} tour${nT > 1 ? 's' : ''} · ${st.gifts || 0} cadeau${(st.gifts || 0) > 1 ? 'x' : ''}`;
   $('#shBar').style.width = c.love + '%'; $('#shTier').textContent = `${tierOf(c.love)} · ${Math.round(c.love)}/100`;
   $('#shHearts').textContent = '♥'.repeat(Math.ceil(c.love / 20)) + '♡'.repeat(5 - Math.ceil(c.love / 20));
   $('#shLikes').textContent = 'Aime : ' + [c.known & 1 ? c.likes[0] : '???', c.known & 4 ? c.likes[1] : '???'].join(' · ');
@@ -2579,20 +2663,191 @@ function renderSheet(){
   add('Caresser', '', () => { pet(c); addLove(c, 1.5); renderSheet(); });
   add('Friandise', 'gold', () => {
     if (c.hunger < .25){ toast(`${c.name} n’a pas faim.`); return; } if (!cdOK(c, 'treat', 15)) return;
-    c.hunger = Math.max(0, c.hunger - .45); addLove(c, 3); c.joy = 3; heart(c.x, c.y - c.dh * .5); snd('plop'); renderSheet();
+    c.hunger = Math.max(0, c.hunger - .45); addLove(c, 3); bumpSt(c, 'treats'); c.joy = 3; heart(c.x, c.y - c.dh * .5); snd('plop'); renderSheet();
   });
+  add(sheetGifts ? 'Fermer les cadeaux' : 'Offrir un cadeau', 'gold', () => { sheetGifts = !sheetGifts; renderSheet(); });
   if (c.type === 'fish'){
     add('Cache-cache', 'blue', () => startHide(c));
-    if (c.trick) add(`Son tour : ${TRICKS[c.trick]}`, 'green', () => doTrick(c));
-    else add(c.love >= 50 ? `Dresser (${c.trickProg}/3)` : 'Dresser (affection 50)', c.love >= 50 ? 'green' : 'flat', () => { if (c.love < 50) toast('Elle doit d’abord t’apprécier davantage.'); else doTrain(c); });
+    const n = (c.tricks || []).length;
+    if (n >= 2) add(`Spectacle (${n} tours)`, 'green', () => doShow(c));
+    if (n < 4) add(c.love >= 50 + 10 * n ? `Dresser (${c.trickProg}/3)` : `Dresser (affection ${50 + 10 * n})`, c.love >= 50 + 10 * n ? 'green' : 'flat', () => { if (c.love < 50 + 10 * n) toast('Elle doit d’abord t’apprécier davantage.'); else doTrain(c); });
   }
   add('Relâcher', 'ghost', () => { closeModals(); releaseCreature(c); });
+  const tr = $('#shTricks'); tr.textContent = '';
+  for (const t of (c.tricks || [])){ const b = document.createElement('button'); b.className = 'seg'; b.textContent = TRICKS[t]; b.addEventListener('click', () => doTrick(c, t)); tr.appendChild(b); }
+  tr.hidden = !tr.children.length; $('#shTricksLab').hidden = tr.hidden;
+  const gl = $('#shGifts'); gl.hidden = !sheetGifts; gl.textContent = '';
+  if (sheetGifts){
+    const have = GIFTS.filter(g => giftCount(g.id) > 0);
+    if (!have.length){ const p = document.createElement('div'); p.className = 'sub'; p.textContent = 'Tu n’as aucun cadeau. Le marché noir en vend.'; const b = document.createElement('button'); b.className = 'gbtn small blue'; b.textContent = 'Aller au marché'; b.addEventListener('click', () => { closeModals(); openShop('gifts'); }); gl.append(p, b); }
+    for (const g of have){ const b = document.createElement('button'); b.className = 'seg'; b.textContent = `${g.n} ×${giftCount(g.id)}`; b.addEventListener('click', () => giveGift(c, g)); gl.appendChild(b); }
+  }
   const ul = $('#shLog'); ul.textContent = '';
   for (const e of (c.log || []).slice(0, 10)){ const li = document.createElement('li'); li.textContent = `${dateTxt(e.d)} : ${e.t}`; ul.appendChild(li); }
 }
 $('#shRename').addEventListener('click', () => {
   const c = sheetCreature; if (!c) return;
   askText('Nouveau nom', c.name).then(n => { if (n && n.trim()){ logc(c, `Renommée « ${n.trim().slice(0, 18)} ».`); c.name = n.trim().slice(0, 18); renderSheet(); refreshUI(); saveSoon(); } });
+});
+
+</script>
+<script>
+'use strict';
+/* =====================================================================
+   Dessinarium — vie des abysses
+   cadeaux, sommeil, décors vivants, nouveaux visiteurs, cadeaux de Noël,
+   photo avec filtres, code de sauvegarde
+   ===================================================================== */
+const GIFTS = [
+  { id: 'g:crane', n: 'Crâne miniature',   taste: 'Crâne',              price: 18 },
+  { id: 'g:bougie', n: 'Bougie noire',     taste: 'Candélabre',         price: 20 },
+  { id: 'g:rose', n: 'Rose fanée',         taste: 'Rose noire',         price: 22 },
+  { id: 'g:ancre', n: 'Ancre miniature',   taste: 'Ancre rouillée',     price: 24 },
+  { id: 'g:os', n: 'Éclat d’os',           taste: 'Corail d’os',        price: 18 },
+  { id: 'g:plume', n: 'Plume de corbeau',  taste: 'Cage à oiseau',      price: 26 },
+  { id: 'g:rune', n: 'Pierre runique',     taste: 'Croix de pierre',    price: 28 },
+  { id: 'g:spore', n: 'Spore luisante',    taste: 'Anémone vénéneuse',  price: 22 }
+];
+const giftCount = id => (state.gifts && state.gifts[id]) || 0;
+function addGift(id, n = 1){ state.gifts = state.gifts || {}; state.gifts[id] = (state.gifts[id] || 0) + n; saveSoon(); }
+
+/* ---------- sommeil ---------- */
+function startSleep(c){
+  const b = bounds(c), decors = creatures.filter(o => o.anchored), d = decors.length ? pickOne(decors) : null;
+  c.sleep = { x: d ? clamp(d.x + rand(-50, 50), b.x0, b.x1) : rand(b.x0, b.x1), y: b.y1 - 4 }; c.sch = 'sleep'; c.zT = 0;
+}
+function wakeCreature(c){ if (c.sch === 'sleep'){ c.sch = null; c.sleep = null; c.retarget = 0; c.energy = Math.max(c.energy || 0, .35); } }
+function sleepTick(c, dt){
+  if (c.type !== 'fish') return; if (c.energy == null) c.energy = .6 + Math.random() * .4;
+  if (c.sch === 'sleep'){
+    c.energy = Math.min(1, c.energy + dt / 70); c.zT -= dt; if (c.zT <= 0){ c.zT = 2.2; floatText(c.x + c.dw * .3, c.y - c.dh * .45, 'z'); }
+    if (c.energy >= 1 || c.fear > 0 || c.hunger > .85 || c.drag || c.held) wakeCreature(c);
+    else { c.tx = c.sleep.x; c.ty = c.sleep.y; }
+  } else if (!c.sch && c.fear <= 0 && c.hunger < .75 && !c.drag && !c.held && !c.leaving && !c.anim){
+    c.energy -= dt / 430; if (c.energy < .12) startSleep(c);
+  }
+}
+
+/* ---------- décors vivants ---------- */
+function decorFx(d){
+  const r = d.react || 0, fl = .75 + .25 * Math.sin(T0 * 7 + d.phase) + .1 * Math.sin(T0 * 13 + d.phase * 2);
+  ctx.save(); ctx.globalCompositeOperation = 'lighter';
+  const glow = (x, y, rad, col, a) => { const g = ctx.createRadialGradient(x, y, 0, x, y, rad); g.addColorStop(0, `rgba(${col},${a})`); g.addColorStop(1, `rgba(${col},0)`); ctx.fillStyle = g; ctx.fillRect(x - rad, y - rad, rad * 2, rad * 2); };
+  if (d.name === 'Candélabre') glow(d.x, d.y - d.dh * .72, d.dh * (.5 + .12 * r), '255,170,70', (.3 + .22 * r) * fl);
+  else if (d.name === 'Crâne'){ for (const sg of [-1, 1]) glow(d.x + sg * d.dw * .13, d.y - d.dh * .52, 22 * unit + 10, '176,123,255', (.18 + .55 * r) * (.6 + .4 * Math.sin(T0 * 3))); }
+  else if (d.name === 'Chapelle engloutie'){ for (const sg of [-1, 1]) glow(d.x + sg * d.dw * .32, d.y - d.dh * .45, 34 * unit + 12, '255,70,90', (.18 + .3 * r) * fl); glow(d.x, d.y - d.dh * .12, 40 * unit + 14, '255,60,80', (.15 + .25 * r) * fl); }
+  ctx.restore();
+}
+
+/* ---------- nouveaux visiteurs ---------- */
+const inkClouds = [];
+function inkCloud(x, y){ inkClouds.push({ x, y, t: 0 }); snd('blob'); scare(x, y, 180, 1.5); }
+function extraVisitorSprite(kind){
+  if (kind === 'siren') return paintify(mk(360, 230, g => {
+    g.lineJoin = 'round'; g.lineWidth = 6; g.strokeStyle = '#05030a';
+    g.fillStyle = '#1f3a55'; g.beginPath(); g.moveTo(190, 112); g.bezierCurveTo(130, 70, 90, 76, 44, 96); g.lineTo(8, 52); g.quadraticCurveTo(26, 112, 8, 176); g.lineTo(44, 128); g.bezierCurveTo(90, 150, 130, 152, 190, 122); g.closePath(); g.fill(); g.stroke();
+    g.strokeStyle = 'rgba(150,200,255,.4)'; g.lineWidth = 2; for (let i = 0; i < 5; i++){ g.beginPath(); g.arc(120 + i * 12, 112, 18, -1.1, 1.1); g.stroke(); }
+    g.strokeStyle = '#05030a'; g.lineWidth = 6; g.fillStyle = '#3a1f5c'; g.beginPath(); g.moveTo(262, 74); g.bezierCurveTo(210, 20, 120, 40, 70, 20); g.bezierCurveTo(130, 70, 170, 90, 240, 120); g.closePath(); g.fill(); g.stroke();
+    g.fillStyle = '#c9cfe6'; g.beginPath(); g.ellipse(214, 112, 42, 30, 0, 0, TAU); g.fill(); g.stroke();
+    g.fillStyle = '#d9dcef'; g.beginPath(); g.arc(270, 84, 24, 0, TAU); g.fill(); g.stroke();
+    g.fillStyle = '#3a1f5c'; g.beginPath(); g.moveTo(246, 78); g.quadraticCurveTo(262, 52, 292, 74); g.quadraticCurveTo(272, 66, 250, 90); g.closePath(); g.fill();
+    g.fillStyle = '#9c1530'; g.beginPath(); g.arc(278, 88, 3.6, 0, TAU); g.fill(); g.strokeStyle = '#05030a'; g.lineWidth = 4; g.beginPath(); g.arc(282, 98, 7, .2, 2.6); g.stroke();
+    g.strokeStyle = '#c9cfe6'; g.lineWidth = 9; g.lineCap = 'round'; g.beginPath(); g.moveTo(236, 118); g.quadraticCurveTo(272, 150, 300, 132); g.stroke();
+  }), 'aquarelle', 31);
+  if (kind === 'octopus') return paintify(mk(330, 280, g => {
+    g.lineJoin = g.lineCap = 'round'; g.strokeStyle = '#05030a';
+    for (let i = 0; i < 8; i++){ const x = 100 + i * 17; for (const [w, col] of [[22, '#05030a'], [14, '#6b2a5a']]){ g.strokeStyle = col; g.lineWidth = w; g.beginPath(); g.moveTo(x, 150); g.bezierCurveTo(x - 30 + (i % 3) * 20, 200, x + 30 - (i % 2) * 40, 230, x - 20 + i * 5, 266); g.stroke(); } }
+    g.lineWidth = 6; g.strokeStyle = '#05030a'; g.fillStyle = '#8a3a78'; g.beginPath(); g.ellipse(165, 100, 100, 82, 0, 0, TAU); g.fill(); g.stroke();
+    g.fillStyle = 'rgba(255,255,255,.22)'; g.beginPath(); g.ellipse(125, 62, 30, 14, -.6, 0, TAU); g.fill();
+    g.fillStyle = '#e8e3b8'; for (const x of [128, 202]){ g.beginPath(); g.ellipse(x, 120, 20, 22, 0, 0, TAU); g.fill(); g.lineWidth = 4; g.stroke(); g.fillStyle = '#05030a'; g.fillRect(x - 3, 106, 6, 28); g.fillStyle = '#e8e3b8'; }
+  }), 'gouache', 32);
+  return paintify(mk(150, 110, g => {
+    g.lineJoin = 'round'; g.lineWidth = 4; g.strokeStyle = 'rgba(210,225,255,.9)';
+    g.fillStyle = 'rgba(230,238,255,.8)'; g.beginPath(); g.moveTo(104, 56); g.quadraticCurveTo(70, 8, 30, 36); g.quadraticCurveTo(14, 56, 30, 76); g.quadraticCurveTo(70, 104, 104, 58); g.closePath(); g.fill(); g.stroke();
+    g.beginPath(); g.moveTo(104, 56); g.quadraticCurveTo(122, 28, 142, 34); g.quadraticCurveTo(134, 56, 142, 78); g.quadraticCurveTo(122, 82, 104, 56); g.fill(); g.stroke();
+    g.fillStyle = '#1a1230'; g.beginPath(); g.ellipse(38, 50, 6, 8, 0, 0, TAU); g.fill(); g.beginPath(); g.ellipse(22, 62, 4, 5, 0, 0, TAU); g.fill();
+  }), 'aquarelle', 33);
+}
+function sirenAura(){
+  for (const v of visitors){
+    if (v.kind !== 'siren') continue;
+    for (const c of creatures){ if (!c.animal || c.leaving || c.held) continue; if (Math.hypot(c.x - v.x, c.y - v.y) < 340 * unit){ c.joy = 3; addLove(c, .35); if (Math.random() < .12) floatText(c.x, c.y - c.dh * .6, '♪'); } }
+  }
+}
+
+/* ---------- cadeaux de saison ---------- */
+let presents = [], presentClock = 20;
+function lifePointer(x, y){
+  for (const l of lanterns){ if (!l.dead && Math.hypot(x - l.x, y - l.y) < 34 + (COARSE ? 14 : 0)){ l.dead = true; addCoins(3); sparkle(l.x, l.y, 12); floatText(l.x, l.y - 14, '+3'); snd('pop'); if (Math.random() < .2){ const g = pickOne(GIFTS); addGift(g.id); toast(`La lanterne contenait : ${g.n.toLowerCase()} !`); } return true; } }
+  for (const p of presents){ if (!p.dead && Math.hypot(x - p.x, y - p.y) < 36 + (COARSE ? 14 : 0)){ p.dead = true; const g = pickOne(GIFTS); addGift(g.id); sparkle(p.x, p.y, 16); confetti(p.x, p.y, 14); snd('gift'); toast(`Cadeau de Noël : ${g.n.toLowerCase()} !`); return true; } }
+  return false;
+}
+function lifeUpdate(dt){
+  for (const c of creatures){ if (c.animal) sleepTick(c, dt); }
+  // décors qui réagissent aux nageurs
+  const sw = creatures.filter(o => !o.anchored && !o.leaving);
+  for (const d of creatures){
+    if (!d.anchored) continue; let near = 0; for (const o of sw) if (Math.hypot(o.x - d.x, o.y - (d.y - d.dh * .4)) < d.dw * .6 + 100 * unit){ near = 1; break; }
+    d.react = (d.react || 0) + (near - (d.react || 0)) * Math.min(1, dt * 2);
+    if (d.type === 'plant' && d.react > .3) d.shake = Math.max(d.shake, .7 * d.react);
+  }
+  lifeClock -= dt; if (lifeClock <= 0){ lifeClock = 1; sirenAura(); }
+  for (const l of lanterns) if (l.dead) l.y = -999;
+  for (const k of inkClouds) k.t += dt; while (inkClouds.length && inkClouds[0].t > 3.2) inkClouds.shift();
+  if (seasonNow() === 'noel'){
+    presentClock -= dt; if (presentClock <= 0 && presents.length < 3){ presentClock = rand(25, 45); presents.push({ x: rand(W * .12, W * .88), y: -20, vy: rand(26, 38), ph: Math.random() * 6, dead: false, life: 30 }); }
+  }
+  for (const p of presents){ p.life -= dt; p.y = Math.min(sandTop() + 10, p.y + p.vy * dt); p.x += Math.sin(T0 + p.ph) * 12 * dt; if (p.life <= 0) p.dead = true; }
+  presents = presents.filter(p => !p.dead);
+}
+let lifeClock = 1;
+function drawLife(phase){
+  if (phase !== 'front') return;
+  for (const k of inkClouds){ const u = k.t / 3.2, r = 40 + u * 130 * unit, a = (1 - u) * .8; const g = ctx.createRadialGradient(k.x, k.y, 0, k.x, k.y, r); g.addColorStop(0, `rgba(10,4,20,${a})`); g.addColorStop(1, 'rgba(10,4,20,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(k.x, k.y, r, 0, TAU); ctx.fill(); }
+  for (const p of presents){
+    const s = 22 * unit + 8, bob = Math.sin(T0 * 2 + p.ph) * 3; ctx.save(); ctx.translate(p.x, p.y + bob);
+    ctx.fillStyle = '#b01c36'; ctx.strokeStyle = '#05030a'; ctx.lineWidth = 2.4; ctx.fillRect(-s, -s * .8, s * 2, s * 1.6); ctx.strokeRect(-s, -s * .8, s * 2, s * 1.6);
+    ctx.fillStyle = '#e8c860'; ctx.fillRect(-s * .18, -s * .8, s * .36, s * 1.6); ctx.fillRect(-s, -s * .1, s * 2, s * .3);
+    ctx.beginPath(); ctx.ellipse(-s * .3, -s * .95, s * .3, s * .2, -.5, 0, TAU); ctx.ellipse(s * .3, -s * .95, s * .3, s * .2, .5, 0, TAU); ctx.fill(); ctx.stroke(); ctx.restore();
+  }
+}
+
+/* ---------- photo avec filtres ---------- */
+const PHOTO_FILTERS = [['none', 'Aucun', 'none'], ['bw', 'Noir et blanc', 'grayscale(1) contrast(1.2)'], ['sepia', 'Sépia', 'sepia(.85) contrast(1.05)'], ['grav', 'Gravure', 'grayscale(1) contrast(1.9) brightness(1.1)'], ['sang', 'Sang', 'sepia(1) hue-rotate(-35deg) saturate(3) contrast(1.1)'], ['brume', 'Brume', 'blur(1.4px) brightness(1.15) saturate(.7)']];
+let photoFilter = 'none';
+function photoDraw(){
+  const cv = $('#phCv'), g = cv.getContext('2d'), k = Math.min(1, 900 / tank.width); cv.width = Math.round(tank.width * k); cv.height = Math.round(tank.height * k);
+  g.filter = PHOTO_FILTERS.find(f => f[0] === photoFilter)[2]; g.drawImage(tank, 0, 0, cv.width, cv.height); g.filter = 'none';
+}
+function openPhoto(){
+  render(performance.now()); const row = $('#phFilters'); row.textContent = '';
+  for (const [k, n] of PHOTO_FILTERS){ const b = document.createElement('button'); b.className = 'seg'; b.textContent = n; b.setAttribute('aria-pressed', k === photoFilter); b.addEventListener('click', () => { photoFilter = k; $$('#phFilters .seg').forEach(x => x.setAttribute('aria-pressed', x === b)); photoDraw(); }); row.appendChild(b); }
+  photoDraw(); openModal('photo');
+}
+$('#phSave').addEventListener('click', () => { $('#phCv').toBlob(b => { if (b) download(b, 'mon-aquarium.png'); }); });
+
+/* ---------- code de sauvegarde (copier / coller) ---------- */
+async function packCode(){
+  const raw = new TextEncoder().encode(JSON.stringify(stateObj())); let bytes = raw, tag = 'R';
+  if (window.CompressionStream){ try { bytes = new Uint8Array(await new Response(new Blob([raw]).stream().pipeThrough(new CompressionStream('gzip'))).arrayBuffer()); tag = 'Z'; } catch (e) {} }
+  let bin = ''; for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+  return 'DSN1' + tag + btoa(bin);
+}
+async function unpackCode(code){
+  code = code.trim(); if (!code.startsWith('DSN1')) throw new Error('code');
+  const bin = atob(code.slice(5)), bytes = Uint8Array.from(bin, ch => ch.charCodeAt(0));
+  let raw = bytes; if (code[4] === 'Z') raw = new Uint8Array(await new Response(new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'))).arrayBuffer());
+  return JSON.parse(new TextDecoder().decode(raw));
+}
+$('#btnCodeCopy').addEventListener('click', async () => {
+  try { const c = await packCode(); await navigator.clipboard.writeText(c); toast(`Code copié (${Math.round(c.length / 1024)} Ko). Colle-le sur un autre appareil.`); } catch (e) { toast('Impossible de copier le code ici. Utilise « Exporter ».'); }
+});
+$('#btnCodePaste').addEventListener('click', async () => {
+  try {
+    const t = await navigator.clipboard.readText(), data = await unpackCode(t); if (!Array.isArray(data.creatures)) throw new Error('format');
+    if (!(await askYesNo('Remplacer ton aquarium actuel par ce code ?', 'Remplacer'))) return;
+    await applyState(data); lists(); uiSettings(); uiCoins(); refreshUI(); save(); closeModals(); toast('Aquarium restauré !');
+  } catch (e) { toast('Aucun code valide dans le presse-papiers.'); }
 });
 
 </script>
@@ -2611,7 +2866,7 @@ const strokeCv = document.createElement('canvas'), sctx = strokeCv.getContext('2
 const prevCv = document.createElement('canvas'), prevCtx = prevCv.getContext('2d');
 let layers = [];
 const ed = { type:'fish', tool:'brush', brush:'pinceau', shape:'ellipse', shapeFill:true, stamp:'eye1', fillMode:'solid',
-  color:'#ff7a45', color2:'#ffd24d', which:1, size:10, opacity:100, stab:0, sym:'none', layer:0, undo:[], redo:[], view:{ z:1, x:0, y:0 }, prevTool:'brush' };
+  color:'#ff7a45', color2:'#ffd24d', which:1, size:10, opacity:100, stab:0, sym:'none', layer:0, guide:0, undo:[], redo:[], view:{ z:1, x:0, y:0 }, prevTool:'brush' };
 let stroking = null, shapeDrag = null, xform = null, panDrag = null, hoverPt = null, pinch = null;
 const ptrs = new Map();
 const editorOpen = () => !$('#editor').hidden;
@@ -2785,6 +3040,14 @@ const STAMPS = {
   bubble:{ n:'Bulle',      d:(g) => { g.lineWidth = 2.5; g.strokeStyle = 'rgba(40,90,130,.85)'; g.fillStyle = 'rgba(255,255,255,.35)'; circ(g, 0, 0, 14); g.fill(); g.stroke(); g.fillStyle = 'rgba(255,255,255,.9)'; circ(g, -5, -5, 3.5); g.fill(); } },
   star:  { n:'Étoile',     d:(g, c) => { g.lineWidth = 2.5; g.strokeStyle = OUT; g.fillStyle = c; g.lineJoin = 'round'; g.beginPath(); for (let i = 0; i < 10; i++){ const r = i % 2 ? 8 : 18, a = -Math.PI / 2 + i * Math.PI / 5; g.lineTo(Math.cos(a) * r, Math.sin(a) * r); } g.closePath(); g.fill(); g.stroke(); } },
   heart: { n:'Cœur',       d:(g, c) => { g.lineWidth = 2.5; g.strokeStyle = OUT; g.fillStyle = c; g.beginPath(); g.moveTo(0, 14); g.bezierCurveTo(-24, -2, -12, -22, 0, -8); g.bezierCurveTo(12, -22, 24, -2, 0, 14); g.fill(); g.stroke(); } },
+  fangs: { n:'Crocs',      d:(g) => { g.fillStyle = '#f4efe0'; g.strokeStyle = OUT; g.lineWidth = 2.5; g.lineJoin = 'round'; for (const x of [-9, 9]){ g.beginPath(); g.moveTo(x - 6, -12); g.lineTo(x + 6, -12); g.lineTo(x, 14); g.closePath(); g.fill(); g.stroke(); } } },
+  horns: { n:'Cornes',     d:(g, c) => { g.fillStyle = c; g.strokeStyle = OUT; g.lineWidth = 3; g.lineJoin = 'round'; for (const s of [-1, 1]){ g.beginPath(); g.moveTo(s * 6, 14); g.quadraticCurveTo(s * 22, 6, s * 14, -18); g.quadraticCurveTo(s * 10, 2, s * 2, 10); g.closePath(); g.fill(); g.stroke(); } } },
+  bat:   { n:'Ailes',      d:(g, c) => { g.fillStyle = c; g.strokeStyle = OUT; g.lineWidth = 2.5; g.lineJoin = 'round'; for (const s of [-1, 1]){ g.beginPath(); g.moveTo(s * 3, 0); g.quadraticCurveTo(s * 14, -18, s * 26, -6); g.quadraticCurveTo(s * 22, 0, s * 20, 4); g.quadraticCurveTo(s * 15, 0, s * 12, 8); g.quadraticCurveTo(s * 8, 2, s * 3, 8); g.closePath(); g.fill(); g.stroke(); } } },
+  eyeR:  { n:'Œil rouge',  d:(g) => { g.fillStyle = '#120810'; g.strokeStyle = OUT; g.lineWidth = 2.5; g.beginPath(); g.ellipse(0, 0, 16, 11, 0, 0, TAU); g.fill(); g.stroke(); g.fillStyle = '#e0203c'; g.beginPath(); g.ellipse(0, 0, 9, 9, 0, 0, TAU); g.fill(); g.fillStyle = '#000'; g.fillRect(-1.5, -9, 3, 18); } },
+  scar:  { n:'Cicatrice',  d:(g) => { g.lineCap = 'round'; g.strokeStyle = '#8c1a30'; g.lineWidth = 3.5; g.beginPath(); g.moveTo(-14, -14); g.lineTo(14, 14); g.stroke(); g.strokeStyle = OUT; g.lineWidth = 2; for (let i = -2; i <= 2; i++){ g.beginPath(); g.moveTo(i * 5 - 5, i * 5 + 4); g.lineTo(i * 5 + 5, i * 5 - 4); g.stroke(); } } },
+  spikes:{ n:'Pointes',    d:(g, c) => { g.fillStyle = c; g.strokeStyle = OUT; g.lineWidth = 2.5; g.lineJoin = 'round'; for (let i = -2; i <= 2; i++){ g.beginPath(); g.moveTo(i * 8 - 5, 10); g.lineTo(i * 8, -16 + Math.abs(i) * 3); g.lineTo(i * 8 + 5, 10); g.closePath(); g.fill(); g.stroke(); } } },
+  cross: { n:'Croix',      d:(g) => { g.fillStyle = '#d9d2c4'; g.strokeStyle = OUT; g.lineWidth = 2.5; g.fillRect(-4, -17, 8, 34); g.strokeRect(-4, -17, 8, 34); g.fillRect(-12, -9, 24, 8); g.strokeRect(-12, -9, 24, 8); } },
+  tear:  { n:'Larme',      d:(g) => { g.fillStyle = '#8fd0ff'; g.strokeStyle = OUT; g.lineWidth = 2.5; g.beginPath(); g.moveTo(0, -16); g.quadraticCurveTo(14, 4, 0, 14); g.quadraticCurveTo(-14, 4, 0, -16); g.fill(); g.stroke(); } },
   spot:  { n:'Tache',      d:(g, c) => { g.fillStyle = c; g.beginPath(); g.moveTo(-14, -2); g.bezierCurveTo(-18, -16, 0, -20, 8, -12); g.bezierCurveTo(22, -10, 20, 8, 8, 14); g.bezierCurveTo(-4, 20, -20, 12, -14, -2); g.fill(); } }
 };
 function drawStamp(g, key, x, y, fx, fy){
@@ -2826,6 +3089,7 @@ function renderPad(){
     } else if (i === ed.layer && xform){ g.drawImage(xform.orig, xform.dx, xform.dy); }
     else g.drawImage(L.cv, 0, 0);
   });
+  if (ed.guide) drawGuide(g, w, h);
   if (ed.sym !== 'none'){
     g.save(); g.setLineDash([6 / v.z, 6 / v.z]); g.lineWidth = 1.2 / v.z; g.strokeStyle = 'rgba(13,43,62,.4)'; g.beginPath();
     if (ed.sym === 'lr' || ed.sym === 'both'){ g.moveTo(w / 2, 0); g.lineTo(w / 2, h); }
@@ -2836,6 +3100,29 @@ function renderPad(){
     g.save(); g.lineWidth = 1.4 / v.z; g.strokeStyle = 'rgba(255,255,255,.95)'; g.beginPath(); g.arc(hoverPt.x, hoverPt.y, ed.size / 2, 0, TAU); g.stroke();
     g.strokeStyle = 'rgba(13,43,62,.7)'; g.lineWidth = .8 / v.z; g.beginPath(); g.arc(hoverPt.x, hoverPt.y, ed.size / 2 + 1.2 / v.z, 0, TAU); g.stroke(); g.restore();
   }
+}
+
+/* ---------- Modèles à calquer (guides, jamais dans le dessin final) ---------- */
+function drawGuide(g, w, h){
+  const t = ed.type, max = { fish: 3, jelly: 2, sub: 1, plant: 1, decor: 1 }[t] || 0; if (!max || !ed.guide) return; const i = ((ed.guide - 1) % max) + 1, cx = w / 2, cy = h / 2, z = ed.view.z;
+  const E = (x, y, rx, ry) => { g.moveTo(x + rx, y); g.ellipse(x, y, rx, ry, 0, 0, TAU); };
+  g.save(); g.setLineDash([8 / z, 6 / z]); g.lineWidth = 2.2 / z; g.strokeStyle = 'rgba(90,70,130,.6)'; g.fillStyle = 'rgba(90,70,130,.07)'; g.beginPath();
+  if (t === 'fish'){
+    if (i === 1){ E(cx + w * .05, cy, w * .26, h * .2); g.moveTo(cx - w * .2, cy); g.lineTo(cx - w * .4, cy - h * .17); g.lineTo(cx - w * .4, cy + h * .17); g.closePath(); g.moveTo(cx - w * .05, cy - h * .18); g.quadraticCurveTo(cx + w * .05, cy - h * .36, cx + w * .15, cy - h * .18); }
+    else if (i === 2){ E(cx, cy, w * .16, h * .32); g.moveTo(cx - w * .1, cy + h * .1); g.lineTo(cx - w * .3, cy + h * .3); g.lineTo(cx - w * .1, cy + h * .32); g.moveTo(cx - w * .1, cy - h * .1); g.lineTo(cx - w * .3, cy - h * .3); g.lineTo(cx - w * .1, cy - h * .32); }
+    else { E(cx + w * .05, cy, w * .34, h * .12); g.moveTo(cx - w * .28, cy); g.lineTo(cx - w * .44, cy - h * .14); g.lineTo(cx - w * .44, cy + h * .14); g.closePath(); }
+  } else if (t === 'jelly'){
+    if (i === 1){ g.moveTo(cx - w * .22, cy); g.arc(cx, cy, w * .22, Math.PI, TAU); for (let k = -2; k <= 2; k++){ g.moveTo(cx + k * w * .08, cy); g.quadraticCurveTo(cx + k * w * .1 + w * .04, cy + h * .22, cx + k * w * .07, cy + h * .4); } }
+    else { E(cx, cy - h * .12, w * .15, h * .26); for (let k = -1; k <= 1; k++){ g.moveTo(cx + k * w * .08, cy + h * .12); g.quadraticCurveTo(cx + k * w * .12, cy + h * .28, cx + k * w * .06, cy + h * .42); } }
+  } else if (t === 'sub'){
+    g.moveTo(cx - w * .2, cy + h * .32); g.lineTo(cx - w * .2, cy - h * .05); g.arc(cx, cy - h * .05, w * .2, Math.PI, TAU); g.lineTo(cx + w * .2, cy + h * .32);
+    for (let k = 0; k < 4; k++) g.quadraticCurveTo(cx + w * .2 - (k * 2 + 1) * w * .05, cy + h * (k % 2 ? .26 : .4), cx + w * .2 - (k + 1) * w * .1, cy + h * .32); g.closePath();
+  } else if (t === 'plant'){
+    for (let k = -1; k <= 1; k++){ g.moveTo(cx + k * w * .1, h * .95); g.quadraticCurveTo(cx + k * w * .2, h * .55, cx + k * w * .12, h * .1 + Math.abs(k) * h * .12); }
+  } else if (t === 'decor'){
+    g.moveTo(cx - w * .2, h * .92); g.lineTo(cx - w * .2, cy - h * .05); g.quadraticCurveTo(cx - w * .2, cy - h * .3, cx, cy - h * .42); g.quadraticCurveTo(cx + w * .2, cy - h * .3, cx + w * .2, cy - h * .05); g.lineTo(cx + w * .2, h * .92); g.closePath();
+  }
+  g.fill(); g.stroke(); g.restore();
 }
 
 /* ---------- Zoom & déplacement de la vue ---------- */
@@ -3038,6 +3325,7 @@ function initEditor(){
     else if (a === 'rl') transformLayer(g => g.rotate(-Math.PI / 12)); else if (a === 'rr') transformLayer(g => g.rotate(Math.PI / 12)); else if (a === 'center') centerAll();
   });
   $('#edGo').addEventListener('click', commitDrawing);
+  $('#edGuide').addEventListener('click', () => { const max = { fish: 3, jelly: 2, sub: 1, plant: 1, decor: 1 }[ed.type] || 0; if (!max){ toast('Pas de modèle pour ce type.'); return; } ed.guide = (ed.guide + 1) % (max + 1); $('#edGuide').textContent = ed.guide ? `Modèle ${ed.guide}` : 'Modèle'; renderPad(); });
   $('#edClose').addEventListener('click', closeEditor);
   $('#editor').addEventListener('pointerdown', e => { if (e.target === $('#editor')) closeEditor(); });
   window.addEventListener('resize', fitPad);
@@ -3212,7 +3500,7 @@ const askYesNo = (text, yes) => askDialog({ title: 'Confirmer', text, yes: yes |
 const askText = (title, def) => askDialog({ title, input: true, def, yes: 'Valider', no: 'Annuler' });
 
 /* ---------- Fenêtres ---------- */
-const MODALS = ['shop', 'carnet', 'settings', 'order', 'sheet'];
+const MODALS = ['shop', 'carnet', 'settings', 'order', 'sheet', 'photo'];
 function closeModals(){ MODALS.forEach(id => { $('#' + id).hidden = true; }); }
 function openModal(id){ closeModals(); deselect(); $('#' + id).hidden = false; }
 MODALS.forEach(id => $('#' + id).addEventListener('pointerdown', e => { if (e.target.id === id) closeModals(); }));
@@ -3308,7 +3596,7 @@ function initUI(){
   on('#btnExport', 'click', () => download(new Blob([JSON.stringify(stateObj())], { type: 'application/json' }), 'mon-aquarium.dessinarium.json'));
   on('#btnImport', 'click', () => $('#impFile').click());
   on('#impFile', 'change', e => { if (e.target.files[0]) importFile(e.target.files[0]); e.target.value = ''; });
-  on('#btnSnap', 'click', () => { render(performance.now()); tank.toBlob(b => { if (b) download(b, 'mon-aquarium.png'); }); });
+  on('#btnSnap', 'click', openPhoto);
   on('#btnReset', 'click', resetAll);
   window.addEventListener('keydown', e => {
     if (e.key !== 'Escape' || editorOpen()) return;
