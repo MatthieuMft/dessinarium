@@ -306,6 +306,51 @@ input[type=range]{width:100%;accent-color:#a67ae8;min-width:0}
   .win.ed .foot{margin-top:4px;padding-top:6px;border-top:0}
   .win.ed #edName{padding:7px 12px;font-size:16px}.win.ed .foot .gbtn{padding:7px 22px;font-size:16px}
 }
+
+/* éditeur : mobile portrait d'abord (plein écran, grand canevas, outils au pouce) */
+.adv-close{display:none}
+.toolrow{display:contents}
+@media (max-width:700px) and (orientation:portrait){
+  #editor{padding:0;align-items:stretch;background:#05030a;backdrop-filter:none;overscroll-behavior:contain}
+  .win.ed{width:100%;height:100dvh;max-height:100dvh;border:0;border-radius:0;box-shadow:none;animation:none;padding:calc(8px + env(safe-area-inset-top)) 10px calc(8px + env(safe-area-inset-bottom));-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+  .win.ed .ribbon{display:none}
+  .win.ed .x{right:8px;top:calc(8px + env(safe-area-inset-top));width:40px;height:40px;font-size:22px}
+  .win.ed .types{flex-wrap:nowrap;overflow-x:auto;margin:0 50px 6px 0;padding:2px;scrollbar-width:none}
+  .win.ed .types::-webkit-scrollbar,.win.ed .chips::-webkit-scrollbar,.win.ed .palette::-webkit-scrollbar{display:none}
+  .win.ed .types .seg{flex:none;padding:9px 14px}
+  .win.ed .winbody{overflow:hidden;display:flex;flex-direction:column;margin:0;padding:0}
+  .win.ed .ed-grid{display:flex;flex-direction:column;flex:1;min-height:0;gap:8px;align-items:stretch}
+  .win.ed .ed-main{position:static;flex:1;min-height:0;display:flex;flex-direction:column;border:0;padding:0;background:none;z-index:auto}
+  .win.ed .stage{flex:1;min-height:0;justify-content:center}
+  .win.ed .zoombar{top:6px;right:6px}
+  .win.ed #zOut,.win.ed #zIn{display:none}
+  .win.ed .zoombar.idle{opacity:0;pointer-events:none}
+  .win.ed .toolrow{display:flex;gap:8px;align-items:stretch}
+  .win.ed .toolrow .adv{flex:1;min-width:0}
+  .win.ed .toolrow .mainacts{display:flex;gap:8px;margin:0;flex:none}
+  .win.ed .toolrow .mainacts .gbtn{width:46px;padding:0;font-size:0;border-radius:10px}
+  .win.ed .toolrow .mainacts .gbtn::before{font-size:22px;line-height:1;font-family:system-ui,sans-serif}
+  #edUndo::before{content:'\21B6'} #edRedo::before{content:'\21B7'} #edClear::before{content:'\2715'}
+  .win.ed .toolrow .mainacts .gbtn:disabled{opacity:.4}
+  .win.ed .ed-side{flex:none;display:flex;flex-direction:column;gap:8px;overflow:visible}
+  .win.ed .ed-side>.group>.gl{display:none}
+  .win.ed .ed-side>.group .chips{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;padding:2px}
+  .win.ed .ed-side>.group .chips .seg{flex:none}
+  .win.ed .slider span:first-child{width:auto}
+  .win.ed .slider input[type=range]{height:34px}
+  .win.ed #grpColor{display:flex;align-items:center;gap:10px}
+  .win.ed #grpColor .colrow{flex:none}
+  .win.ed #grpColor .colrow input[type=color]{margin-left:0;width:36px;height:36px}
+  .win.ed #grpColor .palette{display:flex;flex:1;min-width:0;gap:8px;overflow-x:auto;padding:4px 3px;scrollbar-width:none}
+  .win.ed .col{flex:none;width:36px;height:36px;aspect-ratio:auto;min-width:0}
+  .win.ed .adv{border:0;padding:0;min-width:0;width:100%}
+  .win.ed .ed-side>*{min-width:0;max-width:100%}
+  .win.ed .adv summary{justify-content:center;gap:10px;background:#2a2040;border:2px solid #3f3158;border-radius:10px;padding:10px 12px;font-size:14px}
+  .win.ed .adv[open] .inner{position:fixed;left:0;right:0;bottom:0;max-height:68dvh;overflow:auto;z-index:20;background:var(--win);border-top:3px solid var(--edge);border-radius:16px 16px 0 0;padding:12px 14px calc(16px + env(safe-area-inset-bottom));box-shadow:0 -14px 34px rgba(0,0,0,.75);overscroll-behavior:contain}
+  .win.ed .adv-close{display:flex;position:sticky;top:0;z-index:2;width:100%;justify-content:center}
+  .win.ed .foot{margin-top:6px;padding-top:8px}
+  .win.ed .foot .gbtn{padding:13px 26px}
+}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 </head>
@@ -447,10 +492,11 @@ input[type=range]{width:100%;accent-color:#a67ae8;min-width:0}
         <div class="group" id="grpBrush"><div class="gl">Matière</div><div class="chips" id="brushes"></div></div>
         <div class="group"><div class="chips toolchips" id="tools"></div></div>
         <div class="group" id="grpSize" data-opt><label class="slider"><span>Taille</span><input type="range" id="edSize" min="2" max="60" value="10"><output id="edSizeV">10</output></label></div>
-        <div class="group"><div class="gl">Couleur</div>
+        <div class="group" id="grpColor"><div class="gl">Couleur</div>
           <div class="colrow"><button class="cchip" id="chip1" aria-label="Couleur principale" aria-pressed="true"></button><input type="color" id="edColor" aria-label="Choisir une autre couleur" value="#ff7a45"></div>
           <div class="palette" id="palette"></div></div>
-        <details class="adv"><summary>Plus d'outils</summary><div class="inner">
+        <div class="toolrow" id="toolRow"><details class="adv"><summary>Plus d'outils</summary><div class="inner">
+          <button class="gbtn ghost small adv-close" type="button" id="advClose">Fermer ✕</button>
           <div class="group"><div class="chips toolchips" id="toolsAdv"></div></div>
           <div class="group" id="grpShape" data-opt><div class="gl">Forme</div><div class="chips" id="shapes"></div></div>
           <div class="group" id="grpStamp" data-opt><div class="gl">Tampon</div><div class="stamps" id="stamps"></div></div>
@@ -464,7 +510,7 @@ input[type=range]{width:100%;accent-color:#a67ae8;min-width:0}
           <div class="group" id="grpSym" data-opt><div class="gl">Symétrie</div><div class="chips" id="syms"></div></div>
           <div class="group"><div class="gl">Calques</div><div id="layers"></div><div class="sub">Dessine le contour dans « Contour », puis remplis dans « Couleur ».</div></div>
           <div class="chips"><button class="seg" id="edGuide" title="Affiche une silhouette pour t'aider (elle n'apparaît pas dans le dessin)">Modèle</button><button class="seg" id="edFlip" title="Retourne le dessin de gauche à droite">Retourner</button><button class="seg" id="edImport">Importer une image</button><input type="file" id="edFile" accept="image/*" hidden></div>
-        </div></details>
+        </div></details></div>
       </div>
     </div>
     </div>
@@ -2922,6 +2968,9 @@ function swayStrips(src, w, h, amp, ph){
    pinceaux, gomme, pot, pipette, formes, tampons, symétrie, calques, zoom
    ===================================================================== */
 const PAD_SIZES = { fish:[640,400], jelly:[640,400], sub:[640,400], plant:[640,400], decor:[640,400], bg:[640,400], floor:[960,180] };
+const isMobilePortrait = () => window.matchMedia('(max-width:700px) and (orientation:portrait)').matches;
+// Sur téléphone en portrait, une page plus haute = un dessin plus grand à l'écran (seulement si le dessin est vide).
+function adaptPadSizes(){ if (typeof isBlank === 'function' && !isBlank()) return; const sz = isMobilePortrait() ? [520, 440] : [640, 400]; for (const t of ['fish', 'jelly', 'sub', 'plant', 'decor']) PAD_SIZES[t] = sz; }
 const LAYER_NAMES = ['Couleur', 'Détails', 'Contour'];
 const PALETTE = ['#2b2438','#ffffff','#9aa3b5','#e5383b','#ff7a45','#ffc233','#fff176','#a7d948','#2fb36d','#17b6b0','#27a4e8','#3d5bd9','#7b4fd6','#d04fb8','#ff8fb1','#8b5a3c','#f3d2a6','#5b3a1e'];
 
@@ -3198,12 +3247,12 @@ function clampView(){ const v = ed.view; v.z = clamp(v.z, 1, 8); v.x = clamp(v.x
 function zoomAt(f, cx, cy){
   const v = ed.view, nz = clamp(v.z * f, 1, 8), k = nz / v.z; v.x = cx - (cx - v.x) * k; v.y = cy - (cy - v.y) * k; v.z = nz; clampView(); renderPad(); updateZoomLabel();
 }
-const updateZoomLabel = () => { $('#zFit').textContent = Math.round(ed.view.z * 100) + '%'; };
+const updateZoomLabel = () => { $('#zFit').textContent = Math.round(ed.view.z * 100) + '%'; $('.zoombar').classList.toggle('idle', ed.view.z <= 1.001); };
 function clientToCanvasPx(e){ const r = padCv.getBoundingClientRect(); return { x: (e.clientX - r.left) * padCv.width / r.width, y: (e.clientY - r.top) * padCv.height / r.height }; }
 
 padCv.addEventListener('pointerdown', e => {
   e.preventDefault(); padCv.setPointerCapture(e.pointerId); ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
-  if (ptrs.size === 2){ cancelAction(); const [a, b] = [...ptrs.values()]; pinch = { d0: Math.hypot(a.x - b.x, a.y - b.y) || 1, c0: { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }, v0: { ...ed.view } }; return; }
+  if (ptrs.size === 2){ cancelAction(); const [a, b] = [...ptrs.values()]; pinch = { d0: Math.hypot(a.x - b.x, a.y - b.y) || 1, c0: { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }, v0: { ...ed.view }, t0: performance.now(), moved: false }; return; }
   if (ptrs.size > 2) return;
   const p = toPad(e), t = ed.tool;
   if (e.button === 1 || t === 'pan'){ const c = clientToCanvasPx(e); panDrag = { sx: c.x, sy: c.y, vx: ed.view.x, vy: ed.view.y }; padCv.style.cursor = 'grabbing'; return; }
@@ -3221,6 +3270,7 @@ padCv.addEventListener('pointermove', e => {
     const [a, b] = [...ptrs.values()], d = Math.hypot(a.x - b.x, a.y - b.y) || 1, c = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
     const r = padCv.getBoundingClientRect(), sx = padCv.width / r.width, sy = padCv.height / r.height, z = clamp(pinch.v0.z * d / pinch.d0, 1, 8);
     const cpx = ((pinch.c0.x - r.left) * sx - pinch.v0.x) / pinch.v0.z, cpy = ((pinch.c0.y - r.top) * sy - pinch.v0.y) / pinch.v0.z;
+    if (Math.abs(d / pinch.d0 - 1) > .08 || Math.hypot(c.x - pinch.c0.x, c.y - pinch.c0.y) > 14) pinch.moved = true;
     ed.view.z = z; ed.view.x = (c.x - r.left) * sx - cpx * z; ed.view.y = (c.y - r.top) * sy - cpy * z; clampView(); renderPad(); updateZoomLabel(); return;
   }
   if (panDrag){ const c = clientToCanvasPx(e); ed.view.x = panDrag.vx + (c.x - panDrag.sx); ed.view.y = panDrag.vy + (c.y - panDrag.sy); clampView(); renderPad(); return; }
@@ -3231,6 +3281,7 @@ padCv.addEventListener('pointermove', e => {
 });
 function cancelAction(){ stroking = null; shapeDrag = null; panDrag = null; if (xform){ undo(); xform = null; } sctx.clearRect(0, 0, strokeCv.width, strokeCv.height); renderPad(); }
 function pointerEnd(e){
+  if (e.type === 'pointerup' && pinch && ptrs.size === 2 && !pinch.moved && performance.now() - pinch.t0 < 300){ undo(); if (navigator.vibrate) try { navigator.vibrate(12); } catch (_) {} }
   ptrs.delete(e.pointerId); if (ptrs.size < 2) pinch = null;
   if (panDrag){ panDrag = null; padCv.style.cursor = ed.tool === 'pan' ? 'grab' : 'crosshair'; return; }
   if (stroking || shapeDrag) endStroke();
@@ -3327,11 +3378,19 @@ function setType(t, force){
 }
 function fitPad(){
   const stage = $('.stage'); if (!stage || $('#editor').hidden) return;
+  if (document.activeElement && document.activeElement.id === 'edName') return;
+  const mob = isMobilePortrait(), ma0 = $('.mainacts'), tr = $('#toolRow'), em0 = $('.ed-main');
+  if (ma0 && tr && em0){ if (mob && ma0.parentNode !== tr) tr.insertBefore(ma0, tr.firstChild); else if (!mob && ma0.parentNode !== em0) em0.appendChild(ma0); }
+  if (mob){
+    padCv.style.width = '10px'; padCv.style.height = '10px';
+    const em = $('.ed-main'), aspect = padCv.width / padCv.height, aw = em.clientWidth, ah = em.clientHeight - 4;
+    const w = Math.max(180, Math.min(aw, ah * aspect)); padCv.style.width = w + 'px'; padCv.style.height = (w / aspect) + 'px'; return;
+  }
   padCv.style.width = '10px'; const cw = ($('.ed-main') || stage).clientWidth || 600, twoCol = getComputedStyle($('.ed-grid')).gridTemplateColumns.split(' ').length > 1, short = window.innerHeight < 560, maxH = twoCol ? window.innerHeight - (short ? 152 : 250) : window.innerHeight * .44, aspect = padCv.width / padCv.height;
   const w = Math.max(260, Math.min(cw, maxH * aspect)); padCv.style.width = w + 'px'; padCv.style.height = (w / aspect) + 'px';
 }
 function openEditor(type){
-  $('#editor').hidden = false; openPanel(false);
+  adaptPadSizes(); $('#editor').hidden = false; openPanel(false);
   if (type && type !== ed.type) setType(type, isBlank()); else setType(ed.type, true);
   requestAnimationFrame(() => { fitPad(); renderPad(); });
 }
@@ -3391,6 +3450,8 @@ function initEditor(){
   $('#edGo').addEventListener('click', commitDrawing);
   $('#edGuide').addEventListener('click', () => { const max = { fish: 3, jelly: 2, sub: 1, plant: 1, decor: 1 }[ed.type] || 0; if (!max){ toast('Pas de modèle pour ce type.'); return; } ed.guide = (ed.guide + 1) % (max + 1); $('#edGuide').textContent = ed.guide ? `Modèle ${ed.guide}` : 'Modèle'; renderPad(); });
   $('#edClose').addEventListener('click', closeEditor);
+  $('#advClose').addEventListener('click', () => { $('.adv').open = false; });
+  window.addEventListener('orientationchange', () => setTimeout(fitPad, 250));
   $('#editor').addEventListener('pointerdown', e => { if (e.target === $('#editor')) closeEditor(); });
   window.addEventListener('resize', fitPad);
   window.addEventListener('keydown', e => {
