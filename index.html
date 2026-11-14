@@ -410,7 +410,7 @@ input[type=range]{width:100%;accent-color:#a67ae8;min-width:0}
 }
 /* ---- plaques à pointes : boutons ---- */
 .gbtn,.pill,#selbar,#tip,#toast{
-  --pt:15px; position:relative; isolation:isolate; border:0; border-radius:0; background:none; box-shadow:none; text-shadow:0 1px 0 rgba(0,0,0,.7);
+  --pt:15px; isolation:isolate; border:0; border-radius:0; background:none; box-shadow:none; text-shadow:0 1px 0 rgba(0,0,0,.7);
   clip-path:polygon(var(--pt) 0,calc(100% - var(--pt)) 0,100% 50%,calc(100% - var(--pt)) 100%,var(--pt) 100%,0 50%);
   -webkit-backdrop-filter:none; backdrop-filter:none; transition:transform .1s,filter .15s;
 }
@@ -424,6 +424,8 @@ input[type=range]{width:100%;accent-color:#a67ae8;min-width:0}
   background-blend-mode:normal,normal,soft-light,normal;
 }
 .gbtn{--c:#2a1840;text-transform:uppercase;letter-spacing:.17em;font-size:12.5px;font-weight:700;padding:13px 34px;color:var(--bone)}
+.gbtn,.pill{position:relative}
+#selbar,#tip,#toast{position:fixed}
 .gbtn:hover:not(:disabled){filter:brightness(1.22)}
 .gbtn:active:not(:disabled){transform:translateY(2px);filter:brightness(.9)}
 .gbtn.small{--pt:11px;padding:8px 22px;font-size:11px;letter-spacing:.14em}
@@ -3578,6 +3580,8 @@ function renderSagaPane(tab){
 const MOTS = {
   titre: 'Un message dans la bouteille',
   signature: '',            // par exemple : '— Matthieu'  (laisser vide = pas de signature)
+  parJour: 2,               // nombre maximum de bouteilles par jour (calendrier réel)
+  delaiHeures: 3,           // temps minimum entre deux bouteilles, en heures
   ordre: 'hasard',          // 'hasard' : dans le désordre, sans répétition jusqu'à les avoir tous lus ; 'suite' : dans l'ordre
   notes: [
     'Coucou Galadriel ! Comment ça va ? Youhou !',
@@ -3829,9 +3833,15 @@ let bottle = null;
 const BOTTLE_MSGS = ['« Quelqu’un dessine encore, là-haut ? »', '« Ne réveille pas ce qui chante au fond. »', '« J’ai laissé ma lanterne dans la chapelle. »', '« Les oboles se souviennent. »', '« Donne-leur des noms. »'];
 function startBottle(){
   if (bottle) return false; const dir = Math.random() < .5 ? 1 : -1;
-  bottle = { x: dir > 0 ? -30 : W + 30, y: 34 + rand(0, 16) * unit, dir, t: 0, life: 80 }; toast('Une bouteille dérive à la surface…'); snd('chime'); sagaSeen('evt:bottle'); return true;
+  bottle = { x: dir > 0 ? -30 : W + 30, y: 34 + rand(0, 16) * unit, dir, t: 0, life: 150 }; toast('Une bouteille dérive à la surface…'); snd('chime'); sagaSeen('evt:bottle'); return true;
+}
+function bottleAllowed(){
+  const S = saga(), today = new Date().toLocaleDateString('sv');
+  if (S.bottleDay !== today){ S.bottleDay = today; S.bottleN = 0; }
+  return vieT > 90 && !bottle && S.bottleN < (MOTS.parJour || 2) && Date.now() - (S.bottleLast || 0) > (MOTS.delaiHeures || 3) * 3600000;
 }
 function openBottle(){
+  const S0 = saga(); S0.bottleN = (S0.bottleN || 0) + 1; S0.bottleLast = Date.now(); S0.bottleDay = new Date().toLocaleDateString('sv'); saveSoon();
   const b = bottle; bottle = null; sparkle(b.x, b.y, 22); confetti(b.x, b.y, 12); snd('fanfare');
   const note = nextNote(); if (note) setTimeout(() => openNote(note), 450);
   const r = Math.random(), n = 4 + ((Math.random() * 8) | 0); addCoins(n); floatText(b.x, b.y + 20, '+' + n);
@@ -3922,7 +3932,7 @@ function viePointer(x, y){
 }
 
 /* ---------- mise à jour et dessin ---------- */
-let vieT = 0; const vieSched = { bottle: rand(60, 100), cur: rand(500, 800), mael: rand(1100, 1600) };
+let vieT = 0; const vieSched = { bottle: rand(120, 300), cur: rand(500, 800), mael: rand(1100, 1600) };
 function vieUpdate(dt){
   vieT += dt;
   for (const c of creatures) if (c.emo){ c.emo.t += dt; if (c.emo.t >= c.emo.dur) c.emo = null; }
@@ -3934,7 +3944,7 @@ function vieUpdate(dt){
   for (const p of ripples) p.t += dt; ripples = ripples.filter(p => p.t < .9);
   updateWild(dt); updateSong(dt); updateCurrent(dt); updateMael(dt);
   if (bottle){ bottle.t += dt; bottle.x += bottle.dir * 14 * unit * dt; bottle.y = (96 + 14 * unit) + Math.sin(bottle.t * 1.4) * 6; if (bottle.t > bottle.life || bottle.x < -60 || bottle.x > W + 60) bottle = null; }
-  if (stats.play > 45){ vieSched.bottle -= dt; if (vieSched.bottle <= 0){ vieSched.bottle = rand(200, 340); startBottle(); } }
+  vieSched.bottle -= dt; if (vieSched.bottle <= 0){ vieSched.bottle = rand(150, 320); if (bottleAllowed()) startBottle(); }
   if (stats.play > 500){ vieSched.cur -= dt; if (vieSched.cur <= 0){ vieSched.cur = rand(900, 1300); if (!amb.storm) startCurrent(); } }
   if (stats.play > 1100){ vieSched.mael -= dt; if (vieSched.mael <= 0){ vieSched.mael = rand(1500, 2300); startMaelstrom(); } }
 }
