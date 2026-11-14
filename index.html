@@ -1772,7 +1772,7 @@ function spawnVisitor(kind){
 }
 function visitorClick(v){
   if (v.clicked){ heart(v.x, v.y - v.dh * .4); return; }
-  v.clicked = true; bump('visits'); { const gain = 12 + ((Math.random() * 14) | 0); addCoins(gain); fx.push({ k:'x', x:v.x, y:v.y - v.dh * .3, vy:30, life:1.2, max:1.2, text:'+' + gain }); } sparkle(v.x, v.y, 20); for (let i = 0; i < 4; i++) setTimeout(() => heart(v.x + rand(-40, 40), v.y - v.dh * .3), i * 150);
+  v.clicked = true; bump('visits'); { const gain = 6 + ((Math.random() * 8) | 0); addCoins(gain); fx.push({ k:'x', x:v.x, y:v.y - v.dh * .3, vy:30, life:1.2, max:1.2, text:'+' + gain }); } sparkle(v.x, v.y, 20); for (let i = 0; i < 4; i++) setTimeout(() => heart(v.x + rand(-40, 40), v.y - v.dh * .3), i * 150);
   for (let i = 0; i < 3; i++) setTimeout(() => dropFood(clamp(v.x + rand(-80, 80), 30, W - 30), 20), i * 300);
   snd('sparkle'); toast(`${VIS[v.kind].label.replace(/^./, m => m.toUpperCase())} te salue et laisse des perles !`);
 }
@@ -1803,7 +1803,7 @@ function spawnChest(){
 }
 function openChest(c){
   if (c.open) return; c.open = true; c.openAt = c.t; bump('chests'); sparkle(c.x, c.y - c.dh * .6, 26); confetti(c.x, c.y - c.dh * .6, 20); snd('fanfare');
-  const gain = 50 + ((Math.random() * 70) | 0); setTimeout(() => { addCoins(gain); toast(`Le coffre contenait ${gain} perles noires !`); for (let i = 0; i < 10; i++) fx.push({ k:'f', x:c.x + rand(-30, 30), y:c.y - c.dh * .6, sx:c.x + rand(-30, 30), sy:c.y - c.dh * .6, tx:hudCoinPos().x, ty:hudCoinPos().y, t:-i * .06, d:.7, v:0 }); }, 500);
+  const gain = 25 + ((Math.random() * 35) | 0); setTimeout(() => { addCoins(gain); toast(`Le coffre contenait ${gain} perles noires !`); for (let i = 0; i < 10; i++) fx.push({ k:'f', x:c.x + rand(-30, 30), y:c.y - c.dh * .6, sx:c.x + rand(-30, 30), sy:c.y - c.dh * .6, tx:hudCoinPos().x, ty:hudCoinPos().y, t:-i * .06, d:.7, v:0 }); }, 500);
 }
 
 /* ---------- Banc, amour, œufs, anniversaires, manne ---------- */
@@ -1837,7 +1837,7 @@ function bdayTick(){
       let n = c.bd; while (n < MILESTONES.length && days >= MILESTONES[n]) n++;
       c.bd = n; const label = MILESTONE_LABEL[n - 1];
       confetti(c.x, c.y - c.dh * .3, 28); sparkle(c.x, c.y, 24); snd('fanfare'); toast(`Joyeux anniversaire ${c.name} ! (${label})`);
-      bump('birthdays'); addCoins(10); if (c.animal) gainXp(c, 2); saveSoon(); return;
+      bump('birthdays'); addCoins(5); if (c.animal) gainXp(c, 2); saveSoon(); return;
     }
   }
 }
@@ -1910,7 +1910,7 @@ function worldUpdate(dt){
     lanterns = lanterns.filter(l => l.y > -50);
   } else lanterns.length = 0;
   secClock += dt; bdayClock -= dt;
-  if (secClock >= 1){ secClock = 0; breedTick(); friendTick(); }
+  if (secClock >= 1){ secClock = 0; stats.play = (stats.play || 0) + 1; breedTick(); friendTick(); }
   if (bdayClock <= 0){ bdayClock = 30; bdayTick(); }
   if (settings.events && !document.hidden && !editorOpen()){
     sched.visitor -= dt; sched.chest -= dt; sched.school -= dt; sched.manna -= dt;
@@ -1978,7 +1978,7 @@ function drawWorld(phase, now){
 const amb = { moon: 0, fog: 0, storm: 0 };               // intensités lissées 0..1
 const evt = { moon: null, fog: null, storm: null, kraken: null, pirates: null };
 let wisps = [], flash = 0, bolt = null, clientNPC = null, pointerAt = null, calmed = 0;
-const eventSched = { moon: rand(420, 660), fog: rand(300, 540), storm: rand(500, 800), kraken: rand(720, 1100), pirates: rand(620, 980), angler: rand(240, 420), client: rand(90, 160) };
+const eventSched = { moon: rand(420, 660), fog: rand(300, 540), storm: rand(500, 800), kraken: rand(1500, 2100), pirates: rand(1300, 1900), angler: rand(240, 420), client: rand(90, 160) };
 const bigBusy = () => !!(evt.moon || evt.fog || evt.storm || evt.kraken || evt.pirates);
 
 function distToSeg(px, py, ax, ay, bx, by){
@@ -2004,7 +2004,7 @@ function scare(x, y, r, secs){
 }
 function calmCreature(c){
   c.fear = 0; c.joy = 3; heart(c.x, c.y - c.dh * .5);
-  if (evt.storm){ calmed++; addCoins(2); floatText(c.x, c.y - c.dh * .7, '+2'); }
+  if (evt.storm){ calmed++; addCoins(1); floatText(c.x, c.y - c.dh * .7, '+1'); }
 }
 function attractors(){
   const a = [];
@@ -2032,7 +2032,7 @@ function friendTick(){
 function startMoon(){ evt.moon = { t: 0, dur: 80, shard: 1.2 }; toast('La pleine lune se lève : ramasse les éclats d’argent.'); snd('chime'); return true; }
 function updMoon(dt){
   const m = evt.moon; m.t += dt; m.shard -= dt;
-  if (m.shard <= 0 && m.t < m.dur - 8){ m.shard = rand(1.8, 3); if (pickups.length < 30) pickups.push({ x: rand(W * .12, W * .88), y: -8, vy: rand(26, 40), v: 3, rest: sandTop() + 10, life: 18, ph: Math.random() * 6, dead: false, shard: true }); }
+  if (m.shard <= 0 && m.t < m.dur - 8){ m.shard = rand(1.8, 3); if (pickups.length < 30) pickups.push({ x: rand(W * .12, W * .88), y: -8, vy: rand(26, 40), v: 2, rest: sandTop() + 10, life: 18, ph: Math.random() * 6, dead: false, shard: true }); }
   if (Math.random() < dt * .25){ const c = pickOne(creatures.filter(x => x.animal)); if (c) c.joy = 3; }
   if (m.t > m.dur) evt.moon = null;
 }
@@ -2053,7 +2053,7 @@ function updFog(dt){
   if (f.spawn <= 0 && f.t < f.dur - 10 && wisps.length < 6){ f.spawn = rand(4, 7); wisps.push({ x: rand(W * .15, W * .85), y: rand(H * .2, Math.max(H * .3, sandTop() - 70)), vx: rand(-16, 16), vy: rand(-8, 8), ph: Math.random() * 6, life: 30, dead: false }); }
   if (f.t > f.dur) evt.fog = null;
 }
-function collectWisp(w){ w.dead = true; addCoins(6); sparkle(w.x, w.y, 12); floatText(w.x, w.y - 10, '+6'); snd('wisp'); buzz(15); }
+function collectWisp(w){ w.dead = true; addCoins(3); sparkle(w.x, w.y, 12); floatText(w.x, w.y - 10, '+3'); snd('wisp'); buzz(15); }
 function drawFogAndWisps(){
   const a = amb.fog;
   if (a > .01){
@@ -2083,7 +2083,7 @@ function updStorm(dt){
   const s = evt.storm; s.t += dt; s.next -= dt;
   if (s.next <= 0 && s.t < s.dur - 6){ s.next = rand(5, 9); lightning(); }
   if (Math.random() < dt * 5) bubble(rand(0, W), 10, rand(1.5, 3), rand(20, 40));
-  if (s.t > s.dur){ const gain = 8 + 3 * calmed; addCoins(gain); toast(`L’orage s’éloigne. ${calmed ? calmed + ' créature' + (calmed > 1 ? 's apaisées' : ' apaisée') + ' : ' : ''}+${gain} perles.`); evt.storm = null; }
+  if (s.t > s.dur){ const gain = 5 + 2 * calmed; addCoins(gain); toast(`L’orage s’éloigne. ${calmed ? calmed + ' créature' + (calmed > 1 ? 's apaisées' : ' apaisée') + ' : ' : ''}+${gain} perles.`); evt.storm = null; }
 }
 function drawStormFront(){
   const a = amb.storm; if (a < .02) return;
@@ -2124,7 +2124,7 @@ function grabFish(t, c){ c.held = true; c.heldBy = t; t.grabbed = c; t.state = '
 function releaseGrabbed(t, reward){
   const c = t.grabbed; t.grabbed = null; if (!c) return;
   c.held = false; c.heldBy = null; c.fear = 5; c.immune = 8; c.scare = { x: t.tip.x, y: t.tip.y };
-  if (reward && evt.kraken){ evt.kraken.saved++; addCoins(5); floatText(c.x, c.y - c.dh * .6, '+5'); snd('chime'); }
+  if (reward && evt.kraken){ evt.kraken.saved++; addCoins(2); floatText(c.x, c.y - c.dh * .6, '+2'); snd('chime'); }
 }
 function updKraken(dt){
   const k = evt.kraken; k.t += dt; const ending = k.t > k.dur; for (const c of creatures) if (c.immune > 0) c.immune -= dt;
@@ -2149,7 +2149,7 @@ function updKraken(dt){
 }
 function endKraken(){
   const k = evt.kraken; if (!k) return; k.tent.forEach(t => releaseGrabbed(t, false));
-  const gain = 30 + 12 * k.saved + (k.lost ? 0 : 60); addCoins(gain);
+  const gain = 15 + 6 * k.saved + (k.lost ? 0 : 25); addCoins(gain);
   toast(`${k.variant === 'cthulhu' ? 'Cthulhu' : 'Le Kraken'} replonge dans les abysses. ${k.saved} sauvée${k.saved > 1 ? 's' : ''}, ${k.lost} emportée${k.lost > 1 ? 's' : ''} : +${gain} perles.`);
   snd('fanfare'); evt.kraken = null;
 }
@@ -2226,7 +2226,7 @@ function fireCannon(p){
 function cutHook(h){
   const p = evt.pirates; if (!p || h.state === 'cut') return;
   const c = h.target; if (h.state === 'up' && c){ c.held = false; c.heldBy = null; c.fear = 4; c.scare = { x: h.x, y: h.y - 40 }; c.vy = 0; }
-  h.state = 'cut'; h.life = 1.3; h.vy = 20; p.cut++; addCoins(5); floatText(h.x, h.y, '+5'); snd('chime'); buzz(20); sparkle(h.x, h.y, 6);
+  h.state = 'cut'; h.life = 1.3; h.vy = 20; p.cut++; addCoins(2); floatText(h.x, h.y, '+2'); snd('chime'); buzz(20); sparkle(h.x, h.y, 6);
 }
 function updPirates(dt){
   const p = evt.pirates; p.t += dt; const sd = shipDims();
@@ -2293,14 +2293,14 @@ function makeOrder(){
   const res = creatures.filter(c => !c.anchored), r = Math.random(); let o;
   if (r < .4){
     const have = res.filter(c => c.type === 'fish' || c.type === 'jelly').map(colorName).filter(x => COLOR_LIST.includes(x)), col = have.length && Math.random() < .55 ? pickOne(have) : pickOne(COLOR_LIST);
-    o = { kind: 'color', color: col, reward: 45 + (res.some(c => colorName(c) === col) ? 0 : 30), text: `Je cherche une créature ${col}. Montre-m’en une.` };
+    o = { kind: 'color', color: col, reward: 25 + (res.some(c => colorName(c) === col) ? 0 : 20), text: `Je cherche une créature ${col}. Montre-m’en une.` };
   } else if (r < .62){
-    const type = pickOne(['fish', 'jelly', 'sub']); o = { kind: 'type', type, reward: 70, text: type === 'jelly' ? 'Montre-moi une méduse.' : type === 'sub' ? 'Montre-moi un spectre.' : 'Montre-moi une créature des profondeurs.' };
+    const type = pickOne(['fish', 'jelly', 'sub']); o = { kind: 'type', type, reward: 40, text: type === 'jelly' ? 'Montre-moi une méduse.' : type === 'sub' ? 'Montre-moi un spectre.' : 'Montre-moi une créature des profondeurs.' };
   } else if (r < .82){
-    const best = Math.max(0, ...res.map(c => c.level)), lv = clamp(best + (Math.random() < .5 ? 1 : 0), 1, 3); o = { kind: 'level', level: lv, reward: [0, 70, 110, 200][lv], text: `Je veux voir une créature qui a atteint le stade « ${STAGES[lv]} ».` };
+    const best = Math.max(0, ...res.map(c => c.level)), lv = clamp(best + (Math.random() < .5 ? 1 : 0), 1, 3); o = { kind: 'level', level: lv, reward: [0, 40, 65, 110][lv], text: `Je veux voir une créature qui a atteint le stade « ${STAGES[lv]} ».` };
   } else {
     const pool = DECORS.filter(d => !creatures.some(c => c.name === d.n)), d = pickOne(pool.length ? pool : DECORS);
-    o = { kind: 'decor', decor: d.n, reward: Math.round(d.price * 1.4) + 30, text: `Ma crypte manque de décor. Je veux voir : ${d.n}.` };
+    o = { kind: 'decor', decor: d.n, reward: Math.round(d.price * 1.1) + 10, text: `Ma crypte manque de décor. Je veux voir : ${d.n}.` };
   }
   return o;
 }
@@ -2386,6 +2386,8 @@ function eventsUpdate(dt){
   if (settings.events && !document.hidden && !editorOpen()){
     for (const k of Object.keys(eventSched)){
       eventSched[k] -= dt; if (eventSched[k] > 0) continue;
+      const need = { moon: 900, fog: 900, storm: 1200, kraken: 2400, pirates: 2100, angler: 480, client: 300 }[k];
+      if ((stats.play || 0) < need){ eventSched[k] = 30; continue; }
       const ranges = { moon: [540, 900], fog: [480, 780], storm: [660, 1020], kraken: [900, 1500], pirates: [780, 1260], angler: [300, 540], client: [240, 420] };
       eventSched[k] = rand(...ranges[k]); eventsTrigger(k, false);
     }
