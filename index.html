@@ -229,6 +229,15 @@ input[type=range]{width:100%;accent-color:#a67ae8;min-width:0}
 #introSign{font-family:var(--text);font-style:italic;font-weight:700;font-size:20px;color:var(--txt2);margin:0}
 #introGo{margin-top:8px;font-size:18px;padding:14px 32px}
 
+.shhead{display:flex;gap:14px;align-items:center;margin-bottom:12px}
+#shImg{width:84px;height:84px;object-fit:contain;background:#120d1b;border-radius:10px;border:2px solid var(--line);flex:none}
+.shname{display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-weight:700;font-size:21px;color:var(--bone)}
+.bar{height:10px;border-radius:5px;background:#2a2040;overflow:hidden;margin:6px 0 4px}
+.bar i{display:block;height:100%;background:linear-gradient(90deg,#7d1230,#d0587a);transition:width .3s}
+#shLog{list-style:none;margin:6px 0 0;padding:0;max-height:150px;overflow:auto;font-family:var(--text);font-weight:600;font-size:16px;color:var(--txt2)}
+#shLog li{padding:3px 0;border-bottom:1px dashed var(--line)}
+#sheet{overflow-y:auto;align-items:flex-start}
+.win.sheetwin{max-height:none;margin:auto}
 #clientHint{position:fixed;left:calc(14px + env(safe-area-inset-left));top:calc(68px + env(safe-area-inset-top));z-index:5;animation:pulse 1.6s ease-in-out infinite}
 .orderreward{display:flex;align-items:center;justify-content:center;gap:8px;font-weight:700;font-size:20px;color:var(--bone);margin:6px 0 10px}
 .orderreward .ci{width:30px;height:30px}
@@ -373,6 +382,21 @@ input[type=range]{width:100%;accent-color:#a67ae8;min-width:0}
       <button class="gbtn small" id="btnReset" style="--c:#6b1226">Tout recommencer</button>
     </div>
     <input type="file" id="impFile" accept=".json,application/json" hidden>
+  </div>
+</div>
+
+<!-- Fiche de créature -->
+<div class="modal" id="sheet" hidden role="dialog" aria-modal="true" aria-labelledby="shTitle">
+  <div class="win small sheetwin">
+    <div class="ribbon" id="shTitle">Fiche</div><button class="x" aria-label="Fermer">&times;</button>
+    <div class="shhead"><img id="shImg" alt=""><div><div class="shname"><span id="shName"></span><button class="seg" id="shRename">Renommer</button></div><div class="sub" id="shMeta"></div></div></div>
+    <div class="gl">Affection · <span id="shTier"></span></div>
+    <div class="bar"><i id="shBar"></i></div>
+    <div class="sub" id="shHearts" style="letter-spacing:3px;color:#d0587a;margin-bottom:6px"></div>
+    <div class="gl">Goûts</div><div class="sub" id="shLikes"></div><div class="sub" id="shHates"></div>
+    <div class="btnrow" id="shActs" style="margin-top:12px"></div>
+    <div class="gl" style="margin-top:12px">Journal</div>
+    <ul id="shLog"></ul>
   </div>
 </div>
 
@@ -737,7 +761,8 @@ function addCreature(o, opts = {}){
     x: 0, y: 0, vx: 0, vy: 0, face: 1, dir: 1, ang: 0, wag: rand(0, 6), phase: rand(0, 6), pulseT: Math.random(), hunger: rand(.5, .9),
     boost: 0, shake: 0, retarget: 0, tx: 0, ty: 0, speed: rand(55, 85), z: Math.random(), sf: Math.random(), seed: Math.random() * 10,
     mul: 1, s: 1, dw: 0, dh: 0, drag: false, beat: 0, sch: null, cool: Date.now() + 60000, coinT: rand(10, 20), leaving: false, leaveDir: 1,
-    pers: o.pers || (o.type === 'fish' ? pickOne(Object.keys(PERS)) : null), friend: o.friend || null, fear: 0, scare: null, aff: {}, joy: 0, held: false
+    pers: o.pers || (o.type === 'fish' ? pickOne(Object.keys(PERS)) : null), friend: o.friend || null, fear: 0, scare: null, aff: {}, joy: 0, held: false,
+    love: o.love != null ? o.love : 15, likes: o.likes || null, hates: o.hates || null, known: o.known || 0, log: o.log || [], trick: o.trick || null, trickProg: o.trickProg || 0, glide: 0, dy: 0, spinA: 0, stress: false
   };
   c.sprite = styledSprite(c);
   c.bd = o.bd != null ? o.bd : milestonesPassed(c.born);
@@ -745,7 +770,7 @@ function addCreature(o, opts = {}){
   c.dir = Math.random() < .5 ? -1 : 1; c.face = c.dir;
   if (o.fx != null){ c.x = o.fx * W; c.y = o.fy * H; if (o.sf != null) c.sf = o.sf; }
   else c.x = rand(W * .15, W * .85);
-  layout(c, 1); buildShiny(c);
+  layout(c, 1); buildShiny(c); if (c.animal) assignTastes(c);
   if (c.anchored) c.y = anchoredY(c);
   else {
     const b = bounds(c);
@@ -790,7 +815,7 @@ async function recallCreature(id){
 function addCoins(n){ state.coins += n; uiCoins(); saveSoon(); }
 function dropCoin(c){
   if (pickups.length > 40) return;
-  pickups.push({ x: c.x + rand(-10, 10), y: c.y, vy: 22 + Math.random() * 12, v: COIN_VALUE[c.level], rest: sandTop() + 8 + Math.random() * sandH * .35, life: 26, ph: Math.random() * 6, dead: false });
+  pickups.push({ x: c.x + rand(-10, 10), y: c.y, vy: 22 + Math.random() * 12, v: Math.round(COIN_VALUE[c.level] * (c.love >= 80 ? 1.5 : 1)), rest: sandTop() + 8 + Math.random() * sandH * .35, life: 26, ph: Math.random() * 6, dead: false });
 }
 function coinAt(x, y){ for (const p of pickups){ if (!p.dead && Math.hypot(x - p.x, y - p.y) < 22 + Math.min(8, p.v) + (COARSE ? 14 : 0)) return p; } return null; }
 function collectCoin(p){
@@ -819,7 +844,7 @@ function gainXp(c, n){
   if (levelOf(c.xp) > c.level){
     c.level++; buildShiny(c); sparkle(c.x, c.y, 16 + c.level * 4); snd('chime');
     toast(c.level === 4 ? `${c.name} atteint sa forme maudite !` : `${c.name} évolue : ${STAGES[c.level].toLowerCase()} !`);
-    stats.maxLevel = Math.max(stats.maxLevel || 0, c.level);
+    stats.maxLevel = Math.max(stats.maxLevel || 0, c.level); logc(c, `Est devenue ${STAGES[c.level].toLowerCase()}.`);
   }
   refreshUI(); saveSoon();
 }
@@ -827,10 +852,10 @@ function eat(c, f){
   f.dead = true; c.hunger = Math.max(0, c.hunger - .34); c.beat = .35;
   for (let i = 0; i < 2; i++) bubble(f.x + rand(-5, 5), f.y - 4, rand(2, 3.5), rand(50, 80));
   if (Math.random() < .35) heart(c.x, c.y - c.dh * .5);
-  c.joy = 3; snd('plop'); stats.fed = (stats.fed || 0) + 1; gainXp(c, 1);
+  c.joy = 3; addLove(c, .4); snd('plop'); stats.fed = (stats.fed || 0) + 1; gainXp(c, 1);
 }
 function pet(c){
-  if (c.fear > 0) calmCreature(c);
+  if (c.fear > 0) calmCreature(c); petLove(c);
   c.boost = 1.1; c.shake = 1; c.joy = 3;
   for (let i = 0; i < 3; i++) setTimeout(() => heart(c.x, c.y - c.dh * .45), i * 140);
 }
@@ -851,6 +876,7 @@ function nearestFood(c, maxd){
 }
 function updFish(c, dt){
   const b = bounds(c); let tx = c.tx, ty = c.ty, chase = null;
+  if (c.love < 20 && c.fear <= 0 && pointerAt && T0 - pointerAt.t < 1 && Math.hypot(pointerAt.x - c.x, pointerAt.y - c.y) < 90){ c.fear = .8; c.scare = { x: pointerAt.x, y: pointerAt.y }; }
   const flee = c.fear > 0 && c.scare; if (c.fear > 0) c.fear -= dt;
   const radius = (520 + W * .2) * (c.pers === 'gourmand' ? 1.35 : 1);
   if (!flee && !c.sch && c.hunger > .3){ const f = nearestFood(c, radius); if (f){ chase = f; tx = f.x; ty = clamp(f.y, b.y0, b.y1 + 14); } }
@@ -858,7 +884,9 @@ function updFish(c, dt){
     const a = Math.atan2(c.y - c.scare.y, c.x - c.scare.x); tx = clamp(c.x + Math.cos(a) * 240, b.x0, b.x1); ty = clamp(c.y + Math.sin(a) * 170 + 90, b.y0, b.y1 + 14);
   } else if (!chase && !c.sch){
     const fr = c.friend && creatures.find(o => o.id === c.friend);
-    if (fr && !fr.leaving && !fr.held && Math.hypot(fr.x - c.x, fr.y - c.y) > 150 * unit && c.hunger < .6){ c.tx = fr.x - fr.dir * 70 * unit; c.ty = fr.y + rand(-30, 30); c.retarget = rand(1.2, 2.2); }
+    const follow = c.love >= 60 && pointerAt && T0 - pointerAt.t < 2 && Math.hypot(pointerAt.x - c.x, pointerAt.y - c.y) < 340;
+    if (follow){ c.tx = pointerAt.x; c.ty = pointerAt.y; c.retarget = 1.5; }
+    else if (fr && !fr.leaving && !fr.held && Math.hypot(fr.x - c.x, fr.y - c.y) > 150 * unit && c.hunger < .6){ c.tx = fr.x - fr.dir * 70 * unit; c.ty = fr.y + rand(-30, 30); c.retarget = rand(1.2, 2.2); }
     else { c.retarget -= dt; if (c.retarget <= 0 || Math.hypot(c.tx - c.x, c.ty - c.y) < 30) pickTarget(c, b); }
     tx = c.tx; ty = c.ty;
   }
@@ -926,7 +954,7 @@ function update(dt){
       continue;
     }
     if (c.animal){ c.coinT -= dt; if (c.coinT <= 0){ c.coinT = rand(18, 34) / (1 + c.level * .12); if (c.hunger < .75) dropCoin(c); } }
-    if (!c.drag && !c.held){
+    if (!c.drag && !c.held && !(c.glide > 0)){
       if (c.type === 'fish') updFish(c, dt); else if (c.type === 'jelly') updJelly(c, dt); else updSub(c, dt);
     }
     if (c.type !== 'jelly'){
@@ -970,7 +998,7 @@ function update(dt){
 /* ---------- Rendu ---------- */
 function drawBody(c, now){
   const src = srcFor(c, now), w = c.w, h = c.h, s = c.s;
-  ctx.save();
+  ctx.save(); if (c.sch === 'hide') ctx.globalAlpha = .24;
   if (c.type === 'plant'){
     ctx.translate(c.x, c.y); ctx.scale(c.flip ? -s : s, s);
     const sh = Math.max(2, Math.round(h / [90, 65, 45][perf.level])), amp = Math.max(6, w * .08) * (1 + c.shake * 2.2) * (.6 + flow() * 1.6);
@@ -983,7 +1011,7 @@ function drawBody(c, now){
     ctx.translate(c.x, c.y); ctx.scale(c.flip ? -s : s, s); ctx.drawImage(src, -w / 2, -h);
   } else if (c.type === 'fish' || c.type === 'visitor'){
     const gs = 1 + (c.beat || 0) * .25;
-    ctx.translate(c.x, c.y); ctx.rotate(c.ang); ctx.scale(c.face * s * gs, s * gs);
+    ctx.translate(c.x, c.y + (c.dy || 0)); ctx.rotate(c.ang + (c.spinA || 0)); ctx.scale(c.face * s * gs, s * gs);
     const sw = Math.max(2, Math.round(w / [90, 65, 45][perf.level])), amp = h * (c.type === 'visitor' ? .05 : .07) * (.45 + Math.min(1, Math.hypot(c.vx, c.vy) / 90));
     for (let x0 = 0; x0 < w; x0 += sw){
       const ww = Math.min(sw + .7, w - x0), tail = 1 - (x0 + ww / 2) / w;
@@ -1122,7 +1150,7 @@ let saveTimer = 0;
 function stateObj(){
   return { v: 3, savedAt: Date.now(), settings, stats,
     state: { coins: state.coins, owned: [...state.owned], cap: state.cap, render: state.render, carnet: state.carnet },
-    creatures: creatures.map(c => ({ id:c.id, type:c.type, name:c.name, png:c.png, xp:c.xp, born:c.born, sf:c.sf, fx:c.x / W, fy:c.y / H, layer:c.layer, flip:c.flip, sz:c.sz, bd:c.bd, fixed:c.fixed, pers:c.pers, friend:c.friend })) };
+    creatures: creatures.map(c => ({ id:c.id, type:c.type, name:c.name, png:c.png, xp:c.xp, born:c.born, sf:c.sf, fx:c.x / W, fy:c.y / H, layer:c.layer, flip:c.flip, sz:c.sz, bd:c.bd, fixed:c.fixed, pers:c.pers, friend:c.friend, love:c.love, likes:c.likes, hates:c.hates, known:c.known, log:c.log, trick:c.trick, trickProg:c.trickProg })) };
 }
 function saveSoon(){ clearTimeout(saveTimer); saveTimer = setTimeout(save, 700); }
 function save(){
@@ -1154,7 +1182,7 @@ async function applyState(data){
     if (!TYPES[o.type] || TYPES[o.type].scene) continue;
     const im = await loadImg(o.png); if (!im) continue;
     const cv = document.createElement('canvas'); cv.width = im.width; cv.height = im.height; cv.getContext('2d', { willReadFrequently: true }).drawImage(im, 0, 0);
-    addCreature({ id:o.id, type:o.type, name:String(o.name || '').slice(0, 18) || TYPES[o.type].label, sprite:cv, png:o.png, xp:o.xp | 0, born:o.born, sf:o.sf, fx:o.fx, fy:o.fy, layer:o.layer, flip:o.flip, sz:o.sz, bd:o.bd, fixed:o.fixed, pers:o.pers, friend:o.friend });
+    addCreature({ id:o.id, type:o.type, name:String(o.name || '').slice(0, 18) || TYPES[o.type].label, sprite:cv, png:o.png, xp:o.xp | 0, born:o.born, sf:o.sf, fx:o.fx, fy:o.fy, layer:o.layer, flip:o.flip, sz:o.sz, bd:o.bd, fixed:o.fixed, pers:o.pers, friend:o.friend, love:o.love, likes:o.likes, hates:o.hates, known:o.known, log:o.log, trick:o.trick, trickProg:o.trickProg });
   }
   for (const c of creatures) if (c.friend && !creatures.some(o => o.id === c.friend)) c.friend = null;
   if (W){ buildBg(); buildGlass(); }
@@ -1837,7 +1865,7 @@ function bdayTick(){
       let n = c.bd; while (n < MILESTONES.length && days >= MILESTONES[n]) n++;
       c.bd = n; const label = MILESTONE_LABEL[n - 1];
       confetti(c.x, c.y - c.dh * .3, 28); sparkle(c.x, c.y, 24); snd('fanfare'); toast(`Joyeux anniversaire ${c.name} ! (${label})`);
-      bump('birthdays'); addCoins(5); if (c.animal) gainXp(c, 2); saveSoon(); return;
+      bump('birthdays'); addCoins(5); logc(c, `Fête ses ${label}.`); if (c.animal) gainXp(c, 2); saveSoon(); return;
     }
   }
 }
@@ -1910,7 +1938,7 @@ function worldUpdate(dt){
     lanterns = lanterns.filter(l => l.y > -50);
   } else lanterns.length = 0;
   secClock += dt; bdayClock -= dt;
-  if (secClock >= 1){ secClock = 0; stats.play = (stats.play || 0) + 1; breedTick(); friendTick(); }
+  if (secClock >= 1){ secClock = 0; stats.play = (stats.play || 0) + 1; breedTick(); friendTick(); bondTick(); }
   if (bdayClock <= 0){ bdayClock = 30; bdayTick(); }
   if (settings.events && !document.hidden && !editorOpen()){
     sched.visitor -= dt; sched.chest -= dt; sched.school -= dt; sched.manna -= dt;
@@ -1999,11 +2027,12 @@ function scare(x, y, r, secs){
     if (Math.hypot(c.x - x, c.y - y) < r){
       c.fear = Math.max(c.fear, secs * (c.pers === 'timide' ? 1.5 : c.pers === 'curieux' ? .8 : 1)); c.scare = { x, y };
       if (T0 - (c.fearFx || -9) > 2){ c.fearFx = T0; floatText(c.x, c.y - c.dh * .5, '!'); }
+      if (c.animal && T0 - (c.lastFearLog || -999) > 90){ c.lastFearLog = T0; logc(c, 'A eu très peur.'); }
     }
   }
 }
 function calmCreature(c){
-  c.fear = 0; c.joy = 3; heart(c.x, c.y - c.dh * .5);
+  c.fear = 0; c.joy = 3; heart(c.x, c.y - c.dh * .5); addLove(c, 1);
   if (evt.storm){ calmed++; addCoins(1); floatText(c.x, c.y - c.dh * .7, '+1'); }
 }
 function attractors(){
@@ -2022,7 +2051,7 @@ function friendTick(){
     const a = fish[i], b = fish[j]; if (a.friend || b.friend) continue;
     if (Math.hypot(a.x - b.x, a.y - b.y) < 170 * unit){
       a.aff[b.id] = (a.aff[b.id] || 0) + 1;
-      if (a.aff[b.id] >= 45){ a.friend = b.id; b.friend = a.id; toast(`${a.name} et ${b.name} sont devenus amis.`); for (let k = 0; k < 4; k++) heart((a.x + b.x) / 2 + rand(-20, 20), (a.y + b.y) / 2 - 10); snd('chime'); saveSoon(); }
+      if (a.aff[b.id] >= 45){ a.friend = b.id; b.friend = a.id; logc(a, `Est devenue amie de ${b.name}.`); logc(b, `Est devenue amie de ${a.name}.`); toast(`${a.name} et ${b.name} sont devenus amis.`); for (let k = 0; k < 4; k++) heart((a.x + b.x) / 2 + rand(-20, 20), (a.y + b.y) / 2 - 10); snd('chime'); saveSoon(); }
     }
   }
   for (const a of fish) if (a.friend && Math.random() < .07){ const b = creatures.find(o => o.id === a.friend); if (b && Math.hypot(a.x - b.x, a.y - b.y) < 220 * unit) heart((a.x + b.x) / 2, (a.y + b.y) / 2 - 18); }
@@ -2123,7 +2152,7 @@ function startKraken(){
 function grabFish(t, c){ c.held = true; c.heldBy = t; t.grabbed = c; t.state = 'carry'; c.fear = 3; floatText(c.x, c.y - c.dh * .5, '!'); }
 function releaseGrabbed(t, reward){
   const c = t.grabbed; t.grabbed = null; if (!c) return;
-  c.held = false; c.heldBy = null; c.fear = 5; c.immune = 8; c.scare = { x: t.tip.x, y: t.tip.y };
+  c.held = false; c.heldBy = null; c.fear = 5; c.immune = 8; c.scare = { x: t.tip.x, y: t.tip.y }; logc(c, 'A été sauvée des tentacules.'); addLove(c, 4);
   if (reward && evt.kraken){ evt.kraken.saved++; addCoins(2); floatText(c.x, c.y - c.dh * .6, '+2'); snd('chime'); }
 }
 function updKraken(dt){
@@ -2225,7 +2254,7 @@ function fireCannon(p){
 }
 function cutHook(h){
   const p = evt.pirates; if (!p || h.state === 'cut') return;
-  const c = h.target; if (h.state === 'up' && c){ c.held = false; c.heldBy = null; c.fear = 4; c.scare = { x: h.x, y: h.y - 40 }; c.vy = 0; }
+  const c = h.target; if (h.state === 'up' && c){ c.held = false; c.heldBy = null; c.fear = 4; c.scare = { x: h.x, y: h.y - 40 }; c.vy = 0; logc(c, 'A été libérée de l’hameçon des pirates.'); addLove(c, 4); }
   h.state = 'cut'; h.life = 1.3; h.vy = 20; p.cut++; addCoins(2); floatText(h.x, h.y, '+2'); snd('chime'); buzz(20); sparkle(h.x, h.y, 6);
 }
 function updPirates(dt){
@@ -2372,6 +2401,7 @@ function eventsTrigger(k, manual){
   return false;
 }
 function eventsUpdate(dt){
+  bondUpdate(dt);
   const sm = Math.min(1, dt * .8);
   amb.moon += ((evt.moon && evt.moon.t < evt.moon.dur - 7 ? 1 : 0) - amb.moon) * sm;
   amb.fog += ((evt.fog && evt.fog.t < evt.fog.dur - 7 ? 1 : 0) - amb.fog) * sm;
@@ -2399,6 +2429,171 @@ function drawEvents(phase){
   else if (phase === 'front'){ drawFogAndWisps(); drawStormFront(); drawPirates(); }
   else if (phase === 'lamp'){ drawFlash(); }
 }
+
+</script>
+<script>
+'use strict';
+/* =====================================================================
+   Dessinarium — lien avec chaque créature
+   affection, goûts et dégoûts, journal, tours, cache-cache, lancer, fiche
+   ===================================================================== */
+const TASTE_EVENTS = ['la pleine lune', 'l’orage', 'la brume', 'la compagnie'];
+const TRICKS = { pirouette: 'Pirouette', saut: 'Grand saut', coeur: 'Pluie de cœurs' };
+const TIERS = [[0, 'Méfiante'], [25, 'Curieuse'], [50, 'Apprivoisée'], [75, 'Confiante'], [95, 'Fidèle']];
+let sheetCreature = null;
+
+const tierOf = v => { let t = TIERS[0][1]; for (const [m, n] of TIERS) if (v >= m) t = n; return t; };
+function logc(c, txt){ if (!c.log) c.log = []; c.log.unshift({ d: Date.now(), t: txt }); if (c.log.length > 25) c.log.length = 25; }
+function assignTastes(c){
+  if (!c.log) c.log = [];
+  if (!c.likes){
+    const decors = DECORS.map(d => d.n), l0 = pickOne(decors), pool = decors.concat(TASTE_EVENTS).filter(x => x !== l0), l1 = pickOne(pool);
+    c.likes = [l0, l1]; c.hates = [pickOne(pool.filter(x => x !== l1).concat(['la solitude']))];
+  }
+  if (!c.log.length) logc(c, 'Invoquée dans les abysses.');
+}
+function cdOK(c, k, sec){
+  c.cd = c.cd || {}; const n = Date.now();
+  if (n - (c.cd[k] || 0) < sec * 1000){ toast('Un peu de patience…'); return false; }
+  c.cd[k] = n; return true;
+}
+
+/* ---------- affection ---------- */
+function addLove(c, n){
+  if (!c.animal || c.leaving) return;
+  const before = c.love; c.love = clamp(c.love + n, 0, 100);
+  for (const m of [25, 50, 75, 95]) if (before < m && c.love >= m) tierUp(c, m);
+}
+function tierUp(c, m){
+  toast(m === 25 ? `${c.name} s’intéresse à toi.` : m === 50 ? `${c.name} se laisse apprivoiser.` : m === 75 ? `${c.name} te fait confiance.` : `${c.name} t’est fidèle.`);
+  logc(c, `Affection : ${tierOf(c.love).toLowerCase()}.`);
+  for (let i = 0; i < 3; i++) setTimeout(() => heart(c.x, c.y - c.dh * .5), i * 150);
+  const reveal = [[25, 1, `Aime ${c.likes[0]}.`], [50, 2, `Déteste ${c.hates[0]}.`], [75, 4, `Aime aussi ${c.likes[1]}.`]].find(r => r[0] === m);
+  if (reveal && !(c.known & reveal[1])){ c.known |= reveal[1]; logc(c, reveal[2]); }
+  renderSheet(); saveSoon();
+}
+function petLove(c){ const n = Date.now(); if (n - (c.lastPet || 0) < 4000) return; c.lastPet = n; addLove(c, 2); }
+
+/* ---------- goûts, évalués chaque seconde ---------- */
+function tasteHit(c, t){
+  if (t === 'la pleine lune') return amb.moon > .5;
+  if (t === 'l’orage') return amb.storm > .5;
+  if (t === 'la brume') return amb.fog > .5;
+  const others = creatures.filter(o => o !== c && !o.anchored && o.animal && Math.hypot(o.x - c.x, o.y - c.y) < 280 * unit);
+  if (t === 'la compagnie') return others.length >= 2;
+  if (t === 'la solitude') return others.length === 0;
+  return creatures.some(o => o.anchored && o.name === t && Math.hypot(o.x - c.x, o.y - c.y) < 250 * unit);
+}
+function bondTick(){
+  for (const c of creatures){
+    if (!c.animal || c.leaving || c.held) continue;
+    let d = 0; c.stress = false;
+    for (const l of c.likes || []) if (tasteHit(c, l)) d += .15;
+    for (const h of c.hates || []) if (tasteHit(c, h)){ d -= .2; c.stress = true; }
+    const fr = c.friend && creatures.find(o => o.id === c.friend); if (fr && Math.hypot(fr.x - c.x, fr.y - c.y) < 260 * unit) d += .05;
+    if (c.fear > 0) d -= .15; if (c.hunger > .85) d -= .1;
+    if (d) addLove(c, d);
+    if (c.love > 70 && Math.random() < .05) heart(c.x, c.y - c.dh * .5);
+  }
+  if (sheetCreature && !$('#sheet').hidden) renderSheet();
+}
+
+/* ---------- cache-cache ---------- */
+function startHide(c){
+  const spots = creatures.filter(o => o.anchored);
+  if (!spots.length){ toast('Il n’y a nulle part où se cacher. Ajoute un décor.'); return false; }
+  if (!cdOK(c, 'hide', 60)) return false;
+  const s = pickOne(spots); c.hide = { spot: s, until: T0 + 30, ox: rand(-.25, .25) * s.dw }; c.sch = 'hide'; c.fear = 0;
+  closeModals(); toast(`${c.name} se cache. Trouve-la en touchant l’aquarium !`); return true;
+}
+function endHide(c, found){
+  c.hide = null; c.sch = null; c.retarget = 0;
+  if (found === 'found'){ addLove(c, 6); addCoins(2); floatText(c.x, c.y - c.dh * .6, '+2'); heart(c.x, c.y - c.dh * .5); snd('chime'); toast(`Trouvée ! ${c.name} est ravie.`); logc(c, 'A joué à cache-cache et s’est fait trouver.'); }
+  else if (found === 'timeout'){ addLove(c, 2); toast(`${c.name} sort fièrement de sa cachette.`); logc(c, 'A réussi à rester cachée.'); }
+}
+const foundHide = c => endHide(c, 'found');
+
+/* ---------- tours ---------- */
+function doTrain(c){
+  if (c.trick || c.love < 50) return; if (!cdOK(c, 'train', 25)) return;
+  if (c.hunger > .7){ toast(`${c.name} a trop faim pour apprendre.`); return; }
+  c.trickProg++; addLove(c, 1);
+  if (c.trickProg >= 3){ c.trick = pickOne(Object.keys(TRICKS)); toast(`${c.name} a appris : ${TRICKS[c.trick].toLowerCase()} !`); logc(c, `A appris un tour : ${TRICKS[c.trick].toLowerCase()}.`); confetti(c.x, c.y, 14); snd('fanfare'); }
+  else toast(`${c.name} y est presque… (${c.trickProg}/3)`);
+  renderSheet(); saveSoon();
+}
+function doTrick(c){
+  if (!c.trick || !cdOK(c, 'trick', 8)) return; closeModals();
+  if (c.trick === 'pirouette'){ c.spinT = 0; c.spinning = true; }
+  else if (c.trick === 'saut'){ c.jumpT = 0; c.jumping = true; for (let i = 0; i < 6; i++) bubble(c.x + rand(-10, 10), c.y + 8, rand(2, 5), rand(50, 90)); }
+  else for (let i = 0; i < 9; i++) setTimeout(() => heart(c.x + rand(-34, 34), c.y - c.dh * .5), i * 110);
+  addLove(c, 1); snd('chime');
+  if (Date.now() - (c.cd.trickR || 0) > 30000){ c.cd.trickR = Date.now(); addCoins(2); floatText(c.x, c.y - c.dh * .9, '+2'); }
+}
+
+/* ---------- lancer ---------- */
+function flingCreature(c, vx, vy){
+  if (c.type === 'sub' || c.anchored || c.leaving) return;
+  const k = Math.min(1, 950 / Math.hypot(vx, vy)); c.vx = vx * k; c.vy = vy * k; c.glide = 1.3; c.drag = false;
+  if (c.pers === 'curieux' || c.pers === 'gourmand'){ addLove(c, .6); c.joy = 3; }
+  else if (c.pers === 'timide' || c.pers === 'solitaire'){ addLove(c, -2); c.fear = Math.max(c.fear, 1.5); c.scare = { x: c.x - vx, y: c.y - vy }; }
+  else addLove(c, -.5);
+  for (let i = 0; i < 8; i++) bubble(c.x + rand(-12, 12), c.y + rand(-8, 8), rand(2, 5), rand(50, 100)); snd('blup');
+}
+
+/* ---------- mise à jour par image ---------- */
+function bondUpdate(dt){
+  for (const c of creatures){
+    if (c.glide > 0){
+      c.glide -= dt; const b = bounds(c); c.x += c.vx * dt; c.y += c.vy * dt; c.vx *= Math.max(0, 1 - 1.5 * dt); c.vy *= Math.max(0, 1 - 1.5 * dt);
+      if (c.x < b.x0 || c.x > b.x1){ c.x = clamp(c.x, b.x0, b.x1); c.vx *= -.6; for (let i = 0; i < 4; i++) bubble(c.x, c.y, rand(2, 5), rand(50, 90)); }
+      if (c.y < b.y0 || c.y > b.y1 + 14){ c.y = clamp(c.y, b.y0, b.y1 + 14); c.vy *= -.6; }
+      if (Math.random() < dt * 22) bubble(c.x, c.y, rand(1.5, 3.5), rand(40, 70));
+      if (Math.abs(c.vx) > 10) c.dir = Math.sign(c.vx); c.wag += dt * 14;
+      if (c.glide <= 0){ c.retarget = 0; c.tx = c.x; c.ty = c.y; }
+    }
+    if (c.spinning){ c.spinT += dt; c.spinA = clamp(c.spinT, 0, 1) * TAU; if (c.spinT >= 1){ c.spinning = false; c.spinA = 0; } }
+    if (c.jumping){ c.jumpT += dt; c.dy = -Math.sin(clamp(c.jumpT / 1.2, 0, 1) * Math.PI) * 110 * unit; if (c.jumpT >= 1.2){ c.jumping = false; c.dy = 0; for (let i = 0; i < 6; i++) bubble(c.x + rand(-12, 12), c.y, rand(2, 5), rand(50, 90)); } }
+    if (c.hide){
+      const s = c.hide.spot;
+      if (!creatures.includes(s) || c.fear > 0 || T0 > c.hide.until){ endHide(c, T0 > c.hide.until && creatures.includes(s) ? 'timeout' : ''); continue; }
+      c.tx = s.x + c.hide.ox; c.ty = s.y - s.dh * .3;
+    }
+  }
+}
+
+/* ---------- fiche de créature ---------- */
+function openSheet(c){ sheetCreature = c; deselect(); renderSheet(); openModal('sheet'); renderSheet(); }
+const dateTxt = t => { const d = Math.floor((Date.now() - t) / 86400000); return d < 1 ? 'Aujourd’hui' : d === 1 ? 'Hier' : `Il y a ${d} j`; };
+function renderSheet(){
+  const c = sheetCreature, box = $('#sheet'); if (!box || box.hidden && !c) return;
+  if (!c || !creatures.includes(c)){ if (!box.hidden) closeModals(); sheetCreature = null; return; }
+  $('#shTitle').textContent = 'Fiche'; $('#shImg').src = c.png; $('#shName').textContent = c.name;
+  $('#shMeta').textContent = `${STAGES[c.level]} · ${PERS[c.pers] || TYPES[c.type].label} · ${moodText(c)}`;
+  $('#shBar').style.width = c.love + '%'; $('#shTier').textContent = `${tierOf(c.love)} · ${Math.round(c.love)}/100`;
+  $('#shHearts').textContent = '♥'.repeat(Math.ceil(c.love / 20)) + '♡'.repeat(5 - Math.ceil(c.love / 20));
+  $('#shLikes').textContent = 'Aime : ' + [c.known & 1 ? c.likes[0] : '???', c.known & 4 ? c.likes[1] : '???'].join(' · ');
+  $('#shHates').textContent = 'Déteste : ' + (c.known & 2 ? c.hates[0] : '???');
+  const acts = $('#shActs'); acts.textContent = '';
+  const add = (label, cls, fn) => { const b = document.createElement('button'); b.className = 'gbtn small ' + cls; b.textContent = label; b.addEventListener('click', fn); acts.appendChild(b); };
+  add('Caresser', '', () => { pet(c); addLove(c, 1.5); renderSheet(); });
+  add('Friandise', 'gold', () => {
+    if (c.hunger < .25){ toast(`${c.name} n’a pas faim.`); return; } if (!cdOK(c, 'treat', 15)) return;
+    c.hunger = Math.max(0, c.hunger - .45); addLove(c, 3); c.joy = 3; heart(c.x, c.y - c.dh * .5); snd('plop'); renderSheet();
+  });
+  if (c.type === 'fish'){
+    add('Cache-cache', 'blue', () => startHide(c));
+    if (c.trick) add(`Son tour : ${TRICKS[c.trick]}`, 'green', () => doTrick(c));
+    else add(c.love >= 50 ? `Dresser (${c.trickProg}/3)` : 'Dresser (affection 50)', c.love >= 50 ? 'green' : 'flat', () => { if (c.love < 50) toast('Elle doit d’abord t’apprécier davantage.'); else doTrain(c); });
+  }
+  add('Relâcher', 'ghost', () => { closeModals(); releaseCreature(c); });
+  const ul = $('#shLog'); ul.textContent = '';
+  for (const e of (c.log || []).slice(0, 10)){ const li = document.createElement('li'); li.textContent = `${dateTxt(e.d)} : ${e.t}`; ul.appendChild(li); }
+}
+$('#shRename').addEventListener('click', () => {
+  const c = sheetCreature; if (!c) return;
+  askText('Nouveau nom', c.name).then(n => { if (n && n.trim()){ logc(c, `Renommée « ${n.trim().slice(0, 18)} ».`); c.name = n.trim().slice(0, 18); renderSheet(); refreshUI(); saveSoon(); } });
+});
 
 </script>
 <script>
@@ -2903,7 +3098,7 @@ function hit(x, y){
   return null;
 }
 const stars = lv => '★'.repeat(lv + 1) + '☆'.repeat(4 - lv);
-const moodText = c => c.fear > 0 ? 'effrayé' : c.hunger > .6 ? 'affamé' : c.joy > 0 ? 'joyeux' : c.friend ? 'accompagné' : 'serein';
+const moodText = c => c.fear > 0 ? 'effrayé' : c.stress ? 'stressé' : c.hunger > .6 ? 'affamé' : c.joy > 0 ? 'joyeux' : c.friend ? 'accompagné' : 'serein';
 const hungerTxt = h => h > .6 ? 'Affamé' : h > .3 ? 'Petit creux' : 'Rassasié';
 function ageTxt(c){ const d = Math.floor((Date.now() - c.born) / 86400000); return d < 1 ? "né aujourd'hui" : `né il y a ${d} j`; }
 const tip = $('#tip');
@@ -2930,6 +3125,7 @@ tank.addEventListener('pointerdown', e => {
   if (c){
     if (c.type === 'visitor'){ visitorClick(c); return; }
     if (c.type === 'chest'){ openChest(c); return; }
+    if (c.sch === 'hide'){ foundHide(c); return; }
     down = { c, x, y, moved: false }; tank.setPointerCapture(e.pointerId); return;
   }
   if (y < sandTop() + 4) dropFood(x, Math.max(y, 16));
@@ -2938,6 +3134,7 @@ tank.addEventListener('pointermove', e => {
   const x = e.clientX, y = e.clientY;
   if (down){
     const c = down.c;
+    (down.hist = down.hist || []).push({ x, y, t: performance.now() }); if (down.hist.length > 6) down.hist.shift();
     if (!down.moved && Math.hypot(x - down.x, y - down.y) > 6){ down.moved = true; c.drag = true; c.vx = c.vy = 0; hideTip(); }
     if (!down.moved) return;
     if (c.anchored){ c.x = clamp(x, c.dw / 2, W - c.dw / 2); c.sf = clamp(((y - sandTop()) / sandH - .2) / .6, 0, 1); c.y = anchoredY(c); lists(); }
@@ -2954,8 +3151,12 @@ tank.addEventListener('pointermove', e => {
 });
 function endDown(){
   if (!down) return;
-  const { c, moved } = down; down = null;
-  if (moved){ c.drag = false; c.retarget = 0; saveSoon(); return; }
+  const { c, moved, hist } = down; down = null;
+  if (moved){
+    c.drag = false; c.retarget = 0;
+    if (!c.anchored && hist && hist.length >= 2){ const a = hist[Math.max(0, hist.length - 4)], b = hist[hist.length - 1], dt = (b.t - a.t) / 1000; if (dt > 0){ const vx = (b.x - a.x) / dt, vy = (b.y - a.y) / dt; if (Math.hypot(vx, vy) > 420 && performance.now() - b.t < 140) flingCreature(c, vx, vy); } }
+    saveSoon(); return;
+  }
   pet(c); selectCreature(c);
 }
 tank.addEventListener('pointerup', endDown); tank.addEventListener('pointercancel', endDown);
@@ -2964,10 +3165,11 @@ tank.addEventListener('pointerleave', () => { if (!down) hideTip(); });
 /* ---------- Barre de l'habitant sélectionné ---------- */
 const selbar = $('#selbar');
 function selectCreature(c){
-  selected = c; hideTip(); $('#selName').textContent = c.name;
+  selected = c; hideTip(); $('#selName').textContent = c.name + (c.animal ? ' ' + '♥'.repeat(Math.max(1, Math.ceil(c.love / 20))) : '');
   const box = $('#selBtns'); box.textContent = '';
   const add = (a, label, cls) => { const b = document.createElement('button'); b.dataset.a = a; b.textContent = label; if (cls) b.className = cls; box.appendChild(b); };
   if (c.anchored){ add('layer', c.layer === 'front' ? 'Derrière' : 'Devant'); add('flip', 'Retourner'); add('smaller', '−'); add('bigger', '+'); add('del', 'Retirer', 'warn'); }
+  else if (c.animal){ add('sheet', 'Fiche', 'go'); add('release', 'Relâcher'); }
   else { add('rename', 'Renommer'); add('release', 'Relâcher', 'go'); }
   selbar.hidden = false; positionSelbar();
 }
@@ -2985,6 +3187,7 @@ selbar.addEventListener('click', e => {
   else if (a === 'bigger') c.sz = clamp(c.sz * 1.14, .4, 2.5);
   else if (a === 'smaller') c.sz = clamp(c.sz / 1.14, .4, 2.5);
   else if (a === 'rename'){ askText('Nouveau nom', c.name).then(n => { if (n && n.trim()){ c.name = n.trim().slice(0, 18); $('#selName').textContent = c.name; refreshUI(); saveSoon(); } }); return; }
+  else if (a === 'sheet'){ openSheet(c); return; }
   else if (a === 'release'){ releaseCreature(c); }
   else if (a === 'del'){ removeCreature(c); deselect(); }
   saveSoon();
@@ -3009,7 +3212,7 @@ const askYesNo = (text, yes) => askDialog({ title: 'Confirmer', text, yes: yes |
 const askText = (title, def) => askDialog({ title, input: true, def, yes: 'Valider', no: 'Annuler' });
 
 /* ---------- Fenêtres ---------- */
-const MODALS = ['shop', 'carnet', 'settings', 'order'];
+const MODALS = ['shop', 'carnet', 'settings', 'order', 'sheet'];
 function closeModals(){ MODALS.forEach(id => { $('#' + id).hidden = true; }); }
 function openModal(id){ closeModals(); deselect(); $('#' + id).hidden = false; }
 MODALS.forEach(id => $('#' + id).addEventListener('pointerdown', e => { if (e.target.id === id) closeModals(); }));
