@@ -544,6 +544,14 @@ input[type=range]{width:100%;accent-color:#a67ae8;min-width:0}
   .win.ed{clip-path:none}.win.ed::before,.win.ed::after{display:none}.win.ed{padding-top:calc(8px + env(safe-area-inset-top))}
 }
 
+
+/* mot doux : un petit papier sorti de la bouteille */
+.notepaper{margin:6px 6px 12px;padding:26px 24px 30px;color:#2a1a3a;text-align:center;position:relative;
+  background:radial-gradient(120% 90% at 50% 0,#f6ecd2,#e6d6b0);box-shadow:0 10px 24px rgba(0,0,0,.5);
+  clip-path:polygon(0 3%,4% 0,10% 2%,18% 0,27% 2%,36% 0,46% 2%,57% 0,67% 2%,78% 0,88% 2%,96% 0,100% 3%,99% 30%,100% 60%,98% 100%,90% 98%,80% 100%,68% 98%,56% 100%,44% 98%,32% 100%,20% 98%,10% 100%,2% 98%,0 70%,1% 35%)}
+#noteText{margin:0;font-family:"Cormorant Garamond",Georgia,serif;font-weight:700;font-style:italic;font-size:clamp(20px,4.6vw,27px);line-height:1.4;white-space:pre-line}
+#noteSign{margin:14px 0 0;font-family:"Cormorant Garamond",Georgia,serif;font-style:italic;font-weight:700;font-size:20px;color:#6b1a2a}
+.notepaper::after{content:"";position:absolute;right:16px;bottom:-8px;width:30px;height:30px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#d24a64,#7a1428 60%,#3c0a14);box-shadow:0 3px 6px rgba(0,0,0,.4)}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 </head>
@@ -606,12 +614,24 @@ input[type=range]{width:100%;accent-color:#a67ae8;min-width:0}
   </div>
 </div>
 
+<!-- Mot doux (bouteille) -->
+<div class="modal" id="note" hidden role="dialog" aria-modal="true" aria-labelledby="noteTitle">
+  <div class="win small">
+    <div class="ribbon" id="noteTitle">Message</div><button class="x" aria-label="Fermer">&times;</button>
+    <div class="notepaper"><p id="noteText"></p><p id="noteSign" hidden></p></div>
+    <div class="sub" id="noteCount" style="text-align:center"></div>
+    <div class="btnrow"><button class="gbtn green small" id="noteOk">Le ranger</button></div>
+  </div>
+</div>
+
 <!-- Réglages -->
 <div class="modal" id="settings" hidden role="dialog" aria-modal="true" aria-label="Réglages">
   <div class="win small">
     <div class="ribbon">Réglages</div><button class="x" aria-label="Fermer">&times;</button>
     <label class="opt">Sons <input type="checkbox" id="sfxOn"></label>
     <label class="opt">Musique sombre <input type="checkbox" id="musicOn"></label>
+    <label class="opt">Voyageurs de passage <input type="checkbox" id="guestOn"></label>
+    <label class="opt">Rotation des habitants du grimoire <input type="checkbox" id="rotOn"></label>
     <label class="opt">Volume <input type="range" id="vol" min="0" max="100" style="max-width:190px"></label>
     <div class="btnrow">
       <button class="gbtn blue small" id="btnRelax">Mode relax</button>
@@ -800,7 +820,7 @@ const KEY = 'dessinarium.v1';
 const DEFAULTS = () => ({
   theme:'abysses', waterTop:'#1b2150', waterBot:'#04030b', floor:'sand', sandColor:'#2d2838', part:'glow',
   light:.62, auto:false, bubbles:2, current:25, rays:true, lamp:{ x:.5, color:'#ffd9a0' },
-  frame:'glass', season:'auto', sfx:false, music:false, vol:.5, events:true,
+  frame:'glass', season:'auto', sfx:false, music:false, vol:.5, events:true, rotation:true, guests:true,
   bgImg:null, floorImg:null, bgAlpha:1
 });
 let settings = DEFAULTS();
@@ -824,7 +844,7 @@ const flow = () => settings.current / 100 + amb.storm * .8;
 const snd = (n, f) => { try { Snd.play(n, f); } catch (e) {} };
 const maxResidents = () => 6 + 4 * state.cap;
 const MAX_DECOR = 18;
-const residentCount = () => creatures.filter(c => !c.anchored).length;
+const residentCount = () => creatures.filter(c => !c.anchored && !c.guest).length;
 const decorCount = () => creatures.filter(c => c.anchored).length;
 
 /* ---------- Mise en page ---------- */
@@ -1056,7 +1076,8 @@ function releaseCreature(c){
   toast(`${c.name} s’enfonce dans les ténèbres…`);
 }
 function finishRelease(c){
-  state.carnet.unshift({ id: c.id, type: c.type, name: c.name, png: c.png, xp: c.xp, born: c.born, hy: c.hy || null });
+  if (c.guest){ removeCreature(c); return; }
+  state.carnet.unshift({ id: c.id, type: c.type, name: c.name, png: c.png, xp: c.xp, born: c.born, hy: c.hy || null, snap: { pers: c.pers, love: c.love, likes: c.likes, hates: c.hates, known: c.known, log: c.log, tricks: c.tricks, trickProg: c.trickProg, st: c.st } });
   if (state.carnet.length > 60) state.carnet.length = 60;
   removeCreature(c); toast(`${c.name} rejoint ton grimoire : tu pourras le rappeler.`); uiCarnet();
 }
@@ -1065,7 +1086,7 @@ async function recallCreature(id){
   if (residentCount() >= maxResidents()){ toast('L’aquarium est plein : relâche un habitant ou agrandis-le dans la boutique.'); return; }
   const e = state.carnet[i], im = await loadImg(e.png); if (!im) return;
   const cv = document.createElement('canvas'); cv.width = im.width; cv.height = im.height; cv.getContext('2d', { willReadFrequently: true }).drawImage(im, 0, 0);
-  state.carnet.splice(i, 1); addCreature({ id: e.id, type: e.type, name: e.name, sprite: cv, png: e.png, xp: e.xp, born: e.born, hy: e.hy || null }, { spawn: true });
+  state.carnet.splice(i, 1); addCreature(Object.assign({ id: e.id, type: e.type, name: e.name, sprite: cv, png: e.png, xp: e.xp, born: e.born, hy: e.hy || null }, e.snap || {}), { spawn: true });
   toast(`${e.name} est de retour !`); uiCarnet();
 }
 
@@ -1111,7 +1132,7 @@ function eat(c, f){
   f.dead = true; c.hunger = Math.max(0, c.hunger - .34); c.beat = .35;
   for (let i = 0; i < 2; i++) bubble(f.x + rand(-5, 5), f.y - 4, rand(2, 3.5), rand(50, 80));
   if (Math.random() < .35) heart(c.x, c.y - c.dh * .5);
-  c.joy = 3; addLove(c, .4); snd('plop'); stats.fed = (stats.fed || 0) + 1; gainXp(c, 1);
+  c.joy = 3; addLove(c, .4); if (c.guest) guestFed(c); snd('plop'); stats.fed = (stats.fed || 0) + 1; gainXp(c, 1);
 }
 function pet(c){
   wakeCreature(c); if (c.fear > 0) calmCreature(c); petLove(c); snd('purr', PURR[c.pers] || 520);
@@ -1403,7 +1424,7 @@ let saveTimer = 0;
 function stateObj(){
   return { v: 3, savedAt: Date.now(), settings, stats,
     state: { coins: state.coins, owned: [...state.owned], cap: state.cap, render: state.render, da: 1, carnet: state.carnet, gifts: state.gifts, saga: state.saga },
-    creatures: creatures.map(c => ({ id:c.id, type:c.type, name:c.name, png:c.shopId ? null : c.png, shopId:c.shopId, hy:c.hy, xp:c.xp, born:c.born, sf:c.sf, fx:c.x / W, fy:c.y / H, layer:c.layer, flip:c.flip, sz:c.sz, bd:c.bd, fixed:c.fixed, pers:c.pers, friend:c.friend, love:c.love, likes:c.likes, hates:c.hates, known:c.known, log:c.log, tricks:c.tricks, trickProg:c.trickProg, st:c.st })) };
+    creatures: creatures.filter(c => !c.guest).map(c => ({ id:c.id, type:c.type, name:c.name, png:c.shopId ? null : c.png, shopId:c.shopId, hy:c.hy, xp:c.xp, born:c.born, sf:c.sf, fx:c.x / W, fy:c.y / H, layer:c.layer, flip:c.flip, sz:c.sz, bd:c.bd, fixed:c.fixed, pers:c.pers, friend:c.friend, love:c.love, likes:c.likes, hates:c.hates, known:c.known, log:c.log, tricks:c.tricks, trickProg:c.trickProg, st:c.st })) };
 }
 function saveSoon(){ clearTimeout(saveTimer); saveTimer = setTimeout(save, 700); }
 function save(){
@@ -3092,7 +3113,7 @@ function lifePointer(x, y){
   return false;
 }
 function lifeUpdate(dt){
-  sagaUpdate(dt); vieUpdate(dt);
+  sagaUpdate(dt); vieUpdate(dt); voyageursUpdate(dt);
   for (const c of creatures){ if (c.animal) sleepTick(c, dt); }
   // décors qui réagissent aux nageurs
   const sw = creatures.filter(o => !o.anchored && !o.leaving);
@@ -3495,7 +3516,7 @@ function sagaDraw(phase){
 
 /* ---------- Grimoire : onglets Rituels, Profondeur, Bestiaire, Histoire ---------- */
 let carnetTab = 'crea';
-const CARNET_TABS = [['crea', 'Créatures'], ['rit', 'Rituels'], ['dep', 'Profondeur'], ['bes', 'Bestiaire'], ['his', 'Histoire']];
+const CARNET_TABS = [['crea', 'Créatures'], ['mots', 'Mots doux'], ['rit', 'Rituels'], ['dep', 'Profondeur'], ['bes', 'Bestiaire'], ['his', 'Histoire']];
 const mkEl = (tag, cls, txt) => { const e = document.createElement(tag); if (cls) e.className = cls; if (txt != null) e.textContent = txt; return e; };
 function carnetTabs(){
   const t = $('#carnetTabs'); if (!t) return false; t.textContent = '';
@@ -3507,7 +3528,11 @@ function carnetTabs(){
 function bar(p){ const b = mkEl('div', 'sg-bar'), i = mkEl('i'); i.style.width = Math.round(clamp(p, 0, 1) * 100) + '%'; b.appendChild(i); return b; }
 function renderSagaPane(tab){
   const root = $('#sagaBody'); root.textContent = ''; const s = saga();
-  if (tab === 'rit'){
+  if (tab === 'mots'){
+    const seen = (s.notesSeen || []).slice().reverse();
+    root.appendChild(mkEl('p', 'sub sg-intro', seen.length ? `Les mots trouvés dans les bouteilles : ${seen.length}/${MOTS.notes.length}.` : 'Ouvre les bouteilles qui dérivent à la surface : chacune garde un mot doux.'));
+    seen.forEach(i => { const card = mkEl('div', 'sg-card ok'); card.appendChild(mkEl('div', 'sg-t sg-lore', MOTS.notes[i])); if (MOTS.signature) card.appendChild(mkEl('div', 'sg-m', MOTS.signature)); root.appendChild(card); });
+  } else if (tab === 'rit'){
     root.appendChild(mkEl('p', 'sub sg-intro', 'Dispose trois décors côte à côte : un sceau s’embrase au sol. Touche-le pour accomplir le rituel.'));
     for (const r of RITUALS){
       const info = s.rit[r.id], done = info && info.n, card = mkEl('div', 'sg-card' + (done ? ' ok' : ''));
@@ -3539,6 +3564,139 @@ function renderSagaPane(tab){
   } else if (tab === 'his'){
     root.appendChild(mkEl('p', 'sub sg-intro', `Fragments du journal du Gardien : ${s.lore.length}/${LORE.length}. Trouve-les dans les coffres, les rituels, le sable, le jury et en descendant plus bas.`));
     LORE.forEach((l, i) => { const ok = s.lore.includes(l.id), card = mkEl('div', 'sg-card' + (ok ? ' ok' : '')); card.appendChild(mkEl('div', 'sg-h', ok ? l.t : `Fragment ${i + 1}`)); card.appendChild(mkEl('div', ok ? 'sg-t sg-lore' : 'sg-t', ok ? l.x : 'Pas encore découvert.')); root.appendChild(card); });
+  }
+}
+
+</script>
+<script>
+/* =====================================================================
+   Les mots doux de la bouteille
+   Chaque bouteille ouverte révèle un mot de cette liste.
+   ► Pour changer les mots : remplace simplement les phrases ci-dessous
+     (garde les guillemets et la virgule à la fin de chaque ligne).
+   ===================================================================== */
+const MOTS = {
+  titre: 'Un message dans la bouteille',
+  signature: '',            // par exemple : '— Matthieu'  (laisser vide = pas de signature)
+  ordre: 'hasard',          // 'hasard' : dans le désordre, sans répétition jusqu'à les avoir tous lus ; 'suite' : dans l'ordre
+  notes: [
+    'Ici viendra un mot doux pour toi. (n°1, à remplacer)',
+    'Ici viendra un mot doux pour toi. (n°2, à remplacer)',
+    'Ici viendra un mot doux pour toi. (n°3, à remplacer)',
+    'Ici viendra un mot doux pour toi. (n°4, à remplacer)',
+    'Ici viendra un mot doux pour toi. (n°5, à remplacer)',
+    'Ici viendra un mot doux pour toi. (n°6, à remplacer)'
+  ]
+};
+/* tire le prochain mot : jamais deux fois le même avant d'avoir tout lu */
+function nextNote(){
+  const S = saga(), total = MOTS.notes.length; if (!total) return null;
+  if (!Array.isArray(S.notes)) S.notes = []; if (!Array.isArray(S.notesSeen)) S.notesSeen = [];
+  let pool = []; for (let i = 0; i < total; i++) if (!S.notes.includes(i)) pool.push(i);
+  if (!pool.length){ S.notes = []; for (let i = 0; i < total; i++) pool.push(i); }
+  const i = MOTS.ordre === 'suite' ? pool[0] : pickOne(pool);
+  S.notes.push(i); if (!S.notesSeen.includes(i)) S.notesSeen.push(i); saveSoon();
+  return { i, text: MOTS.notes[i], n: S.notesSeen.length, total };
+}
+function openNote(note){
+  $('#noteTitle').textContent = MOTS.titre; $('#noteText').textContent = note.text; $('#noteSign').textContent = MOTS.signature || '';
+  $('#noteSign').hidden = !MOTS.signature; $('#noteCount').textContent = `Mot doux ${note.n} sur ${note.total}`;
+  openModal('note');
+}
+
+</script>
+<script>
+/* ============ Voyageurs : de nouveaux visages qui passent + rotation du grimoire ============ */
+const GUEST_KINDS = ['classique', 'anguille', 'lune', 'epineux', 'lanterne'];
+function guestCanvas(kind, hue){
+  const body = `hsl(${hue} 66% 55%)`, fin = `hsl(${(hue + 38) % 360} 74% 62%)`, belly = `hsl(${hue} 68% 80%)`, dark = `hsl(${hue} 34% 27%)`;
+  const eye = (g, x, y, r) => { g.lineWidth = 5; g.fillStyle = '#fff'; g.beginPath(); g.arc(x, y, r, 0, TAU); g.fill(); g.stroke(); g.fillStyle = OUT; g.beginPath(); g.arc(x + r * .25, y + r * .1, r * .5, 0, TAU); g.fill(); };
+  return mk(340, 210, g => {
+    g.lineWidth = 7; g.strokeStyle = OUT; g.fillStyle = fin;
+    if (kind === 'classique'){
+      g.beginPath(); g.moveTo(88, 104); g.lineTo(26, 40); g.quadraticCurveTo(48, 104, 26, 168); g.closePath(); g.fill(); g.stroke();
+      g.beginPath(); g.moveTo(130, 60); g.quadraticCurveTo(180, 6, 226, 56); g.quadraticCurveTo(180, 66, 130, 60); g.fill(); g.stroke();
+      g.fillStyle = body; g.beginPath(); g.ellipse(190, 106, 112, 60, 0, 0, TAU); g.fill(); g.stroke();
+      g.fillStyle = belly; g.beginPath(); g.ellipse(196, 134, 80, 22, 0, 0, TAU); g.fill();
+      g.strokeStyle = `hsl(${(hue + 200) % 360} 50% 30%)`; g.lineWidth = 8; for (const x of [150, 188, 226]){ g.beginPath(); g.moveTo(x, 62); g.quadraticCurveTo(x + 8, 106, x, 150); g.stroke(); } g.strokeStyle = OUT; eye(g, 262, 92, 16);
+    } else if (kind === 'anguille'){
+      g.lineCap = 'round'; const path = () => { g.beginPath(); g.moveTo(24, 150); g.bezierCurveTo(100, 20, 170, 200, 250, 96); };
+      g.strokeStyle = OUT; g.lineWidth = 58; path(); g.stroke(); g.strokeStyle = body; g.lineWidth = 44; path(); g.stroke();
+      g.strokeStyle = belly; g.lineWidth = 14; g.beginPath(); g.moveTo(40, 156); g.bezierCurveTo(110, 40, 170, 200, 246, 104); g.stroke();
+      g.fillStyle = body; g.strokeStyle = OUT; g.lineWidth = 7; g.beginPath(); g.ellipse(268, 90, 36, 28, -.3, 0, TAU); g.fill(); g.stroke(); eye(g, 276, 80, 11);
+      g.strokeStyle = fin; g.lineWidth = 8; g.beginPath(); g.moveTo(96, 60); g.quadraticCurveTo(120, 20, 150, 60); g.stroke();
+    } else if (kind === 'lune'){
+      g.beginPath(); g.moveTo(110, 100); g.lineTo(40, 58); g.quadraticCurveTo(60, 104, 40, 150); g.closePath(); g.fill(); g.stroke();
+      g.beginPath(); g.moveTo(150, 22); g.quadraticCurveTo(120, -2, 70, 6); g.quadraticCurveTo(110, 40, 150, 40); g.fill(); g.stroke();
+      g.beginPath(); g.moveTo(150, 184); g.quadraticCurveTo(120, 206, 70, 198); g.quadraticCurveTo(110, 164, 150, 166); g.fill(); g.stroke();
+      g.fillStyle = body; g.beginPath(); g.ellipse(190, 102, 84, 92, 0, 0, TAU); g.fill(); g.stroke();
+      g.fillStyle = belly; g.beginPath(); g.ellipse(176, 112, 52, 62, -.2, 0, TAU); g.fill(); eye(g, 232, 80, 15);
+      g.lineWidth = 5; g.beginPath(); g.arc(268, 118, 9, .3, 2.3); g.stroke();
+    } else if (kind === 'epineux'){
+      g.fillStyle = fin; for (let i = 0; i < 16; i++){ const a = i / 16 * TAU, x = 180 + Math.cos(a) * 66, y = 106 + Math.sin(a) * 66; g.beginPath(); g.moveTo(180 + Math.cos(a - .14) * 62, 106 + Math.sin(a - .14) * 62); g.lineTo(180 + Math.cos(a) * 98, 106 + Math.sin(a) * 98); g.lineTo(180 + Math.cos(a + .14) * 62, 106 + Math.sin(a + .14) * 62); g.closePath(); g.fill(); g.stroke(); }
+      g.beginPath(); g.moveTo(112, 106); g.lineTo(60, 70); g.quadraticCurveTo(76, 106, 60, 142); g.closePath(); g.fill(); g.stroke();
+      g.fillStyle = body; g.beginPath(); g.arc(180, 106, 70, 0, TAU); g.fill(); g.stroke(); g.fillStyle = belly; g.beginPath(); g.ellipse(184, 136, 46, 22, 0, 0, TAU); g.fill();
+      eye(g, 222, 90, 15); g.lineWidth = 5; g.beginPath(); g.arc(246, 118, 9, .3, 2.3); g.stroke();
+    } else {   // lanterne
+      g.beginPath(); g.moveTo(80, 124); g.lineTo(22, 78); g.quadraticCurveTo(44, 124, 22, 176); g.closePath(); g.fill(); g.stroke();
+      g.fillStyle = dark; g.beginPath(); g.ellipse(170, 126, 106, 64, 0, 0, TAU); g.fill(); g.stroke();
+      g.strokeStyle = fin; g.lineWidth = 6; g.beginPath(); g.moveTo(206, 66); g.quadraticCurveTo(240, 12, 292, 22); g.stroke();
+      g.fillStyle = '#ffe9a0'; g.strokeStyle = OUT; g.lineWidth = 6; g.beginPath(); g.arc(298, 26, 16, 0, TAU); g.fill(); g.stroke();
+      g.fillStyle = '#efe6cf'; g.lineWidth = 4; for (let i = 0; i < 6; i++){ const x = 214 + i * 14; g.beginPath(); g.moveTo(x, 138); g.lineTo(x + 6, 162); g.lineTo(x + 12, 138); g.closePath(); g.fill(); g.stroke(); }
+      eye(g, 244, 100, 15);
+    }
+  });
+}
+let guestClock = 10, guestHint = 0, rotClock = rand(300, 420), rot = null;
+function spawnGuest(){
+  const sp = spriteFrom(guestCanvas(pickOne(GUEST_KINDS), rand(0, 360))); if (!sp) return null;
+  const c = addCreature({ type: 'fish', name: pickOne(NAMES), sprite: sp }, {});
+  c.guest = { t: 0, stay: rand(170, 300), fed: 0 }; c.log = [{ d: Date.now(), t: 'Voyageur de passage.' }];
+  const b = bounds(c), dir = Math.random() < .5 ? 1 : -1;
+  c.x = dir > 0 ? b.x0 : b.x1; c.y = rand(b.y0, b.y1); c.tx = c.x; c.ty = c.y; c.dir = dir; c.face = dir; c.retarget = 0; c.hunger = rand(.5, .9); c.coinT = rand(25, 50);
+  return c;
+}
+function guestFed(c){
+  const G = c.guest; if (!G) return; G.fed++;
+  if (G.fed === 2){ emote(c, 'heart', 2.4); toast(`${c.name} semble apprécier ta compagnie…`); }
+}
+function adoptGuest(c){
+  c.guest = null; c.cool = Date.now() + 60000; logc(c, 'A choisi de rester.'); addLove(c, 10);
+  for (let i = 0; i < 4; i++) setTimeout(() => heart(c.x + rand(-20, 20), c.y - c.dh * .5), i * 140);
+  sparkle(c.x, c.y, 22); snd('fanfare'); toast(`${c.name} a décidé de rester avec toi !`); bump('adopted'); refreshUI(); saveSoon();
+}
+function voyageursUpdate(dt){
+  const gs = creatures.filter(c => c.guest);
+  if (settings.guests){
+    guestClock -= dt;
+    if (guestClock <= 0){
+      guestClock = rand(45, 100); const n = residentCount(), target = n <= 3 ? 2 : 1;
+      if (gs.length < target && creatures.filter(c => !c.anchored).length < 16){
+        const c = spawnGuest(); if (c && guestHint < 2){ guestHint++; toast(`${c.name} passe par ici. Donne-lui à manger trois fois, et il restera peut-être.`); }
+      }
+    }
+  }
+  for (const c of gs){
+    const G = c.guest; if (!G || c.leaving) continue; G.t += dt;
+    if (G.fed >= 3){
+      if (residentCount() < maxResidents()) adoptGuest(c);
+      else if (!G.wait){ G.wait = true; toast(`${c.name} voudrait rester, mais l’aquarium est plein.`); }
+    } else if (G.t > G.stay){ c.leaving = true; c.sch = null; c.leaveDir = c.x < W / 2 ? -1 : 1; toast(`${c.name} repart dans les ténèbres…`); }
+  }
+  // rotation du grimoire : un habitant s'en va, un autre revient, pour que l'aquarium change de visages
+  if (rot){
+    rot.t += dt;
+    if (!creatures.includes(rot.r)){ if (state.carnet.some(e => e.id === rot.id)) recallCreature(rot.id); rot = null; rotClock = rand(420, 620); }
+    else if (rot.t > 50){ rot = null; rotClock = rand(300, 420); }
+  } else if (settings.rotation){
+    rotClock -= dt;
+    if (rotClock <= 0){
+      rotClock = rand(300, 420); const res = creatures.filter(c => !c.anchored && !c.guest && !c.leaving && !c.drag && !c.held && !c.sch && c.type !== 'sub');
+      if (res.length >= 3 && state.carnet.length){
+        const pool = res.filter(c => c.love < 70), r = (pool.length ? pool : res).sort((a, b) => a.love - b.love)[0], want = state.carnet[state.carnet.length - 1];
+        if (r && want){ rot = { r, id: want.id, t: 0 }; releaseCreature(r); toast(`${r.name} rejoint le grimoire : ${want.name} revient.`); }
+      }
+    }
   }
 }
 
@@ -3664,13 +3822,10 @@ function startBottle(){
   bottle = { x: dir > 0 ? -30 : W + 30, y: 34 + rand(0, 16) * unit, dir, t: 0, life: 80 }; toast('Une bouteille dérive à la surface…'); snd('chime'); sagaSeen('evt:bottle'); return true;
 }
 function openBottle(){
-  const b = bottle; bottle = null; sparkle(b.x, b.y, 22); confetti(b.x, b.y, 12); snd('fanfare'); const r = Math.random(), S = saga();
-  let txt = pickOne(BOTTLE_MSGS);
-  if (r < .3 && S.lore.length < LORE.length){ setTimeout(grantLore, 900); }
-  else if (r < .55){ if (!addMap()){ addCoins(20); txt += ' (+20 oboles)'; } else txt += ' Une carte au trésor y était glissée !'; }
-  else if (r < .78){ const g = pickOne(GIFTS); addGift(g.id); txt += ` Il y avait : ${g.n.toLowerCase()}.`; }
-  else { const n = 15 + ((Math.random() * 20) | 0); addCoins(n); floatText(b.x, b.y + 20, '+' + n); txt += ` (+${n} oboles)`; }
-  toast(txt);
+  const b = bottle; bottle = null; sparkle(b.x, b.y, 22); confetti(b.x, b.y, 12); snd('fanfare');
+  const note = nextNote(); if (note) setTimeout(() => openNote(note), 450);
+  const r = Math.random(), n = 4 + ((Math.random() * 8) | 0); addCoins(n); floatText(b.x, b.y + 20, '+' + n);
+  if (r < .22) setTimeout(grantLore, 1200); else if (r < .38) addMap(); else if (r < .55){ const g = pickOne(GIFTS); addGift(g.id); }
 }
 
 /* ---------- grand courant ---------- */
@@ -3757,7 +3912,7 @@ function viePointer(x, y){
 }
 
 /* ---------- mise à jour et dessin ---------- */
-let vieT = 0; const vieSched = { bottle: rand(150, 260), cur: rand(500, 800), mael: rand(1100, 1600) };
+let vieT = 0; const vieSched = { bottle: rand(60, 100), cur: rand(500, 800), mael: rand(1100, 1600) };
 function vieUpdate(dt){
   vieT += dt;
   for (const c of creatures) if (c.emo){ c.emo.t += dt; if (c.emo.t >= c.emo.dur) c.emo = null; }
@@ -3769,7 +3924,7 @@ function vieUpdate(dt){
   for (const p of ripples) p.t += dt; ripples = ripples.filter(p => p.t < .9);
   updateWild(dt); updateSong(dt); updateCurrent(dt); updateMael(dt);
   if (bottle){ bottle.t += dt; bottle.x += bottle.dir * 14 * unit * dt; bottle.y = (96 + 14 * unit) + Math.sin(bottle.t * 1.4) * 6; if (bottle.t > bottle.life || bottle.x < -60 || bottle.x > W + 60) bottle = null; }
-  if (stats.play > 200){ vieSched.bottle -= dt; if (vieSched.bottle <= 0){ vieSched.bottle = rand(300, 560); startBottle(); } }
+  if (stats.play > 45){ vieSched.bottle -= dt; if (vieSched.bottle <= 0){ vieSched.bottle = rand(200, 340); startBottle(); } }
   if (stats.play > 500){ vieSched.cur -= dt; if (vieSched.cur <= 0){ vieSched.cur = rand(900, 1300); if (!amb.storm) startCurrent(); } }
   if (stats.play > 1100){ vieSched.mael -= dt; if (vieSched.mael <= 0){ vieSched.mael = rand(1500, 2300); startMaelstrom(); } }
 }
@@ -4476,7 +4631,7 @@ function refreshUI(){
   $('#empty').style.display = creatures.length || !W ? 'none' : 'flex';
   $('#btnDraw').classList.toggle('pulse', !creatures.length);
 }
-function uiSettings(){ applyFrame(); $('#sfxOn').checked = settings.sfx; $('#musicOn').checked = settings.music; $('#vol').value = Math.round(settings.vol * 100); }
+function uiSettings(){ applyFrame(); $('#sfxOn').checked = settings.sfx; $('#musicOn').checked = settings.music; $('#vol').value = Math.round(settings.vol * 100); $('#guestOn').checked = settings.guests !== false; $('#rotOn').checked = settings.rotation !== false; }
 function uiLocksChanged(){ refreshEditorLocks(); }
 function applyFrame(){ $('#frame').dataset.frame = settings.frame; buildGlass(); }
 const openPanel = () => { closeModals(); };
@@ -4505,7 +4660,7 @@ function showTip(c, x, y){
   const b = document.createElement('b'); b.textContent = c.type === 'chest' ? 'Coffre maudit' : c.type === 'visitor' ? 'Visiteur : ' + c.name : c.name; tip.appendChild(b); tip.appendChild(document.createElement('br'));
   if (c.type === 'chest') tipLine(c.open ? 'Ouvert !' : 'Clique pour l’ouvrir', 'm');
   else if (c.type === 'visitor') tipLine(c.clicked ? 'Déjà salué' : 'Clique pour le saluer', 'm');
-  else if (c.animal){ tipLine(stars(c.level), 'stars'); tipLine(` ${STAGES[c.level]}${c.pers ? ' · ' + PERS[c.pers] : ''} · ${moodText(c)}`, 'm'); const fr = c.friend && creatures.find(o => o.id === c.friend); if (fr){ tip.appendChild(document.createElement('br')); tipLine(`Ami de ${fr.name}`, 'm'); } }
+  else if (c.animal){ if (c.guest){ tipLine('Voyageur de passage', 'm'); tip.appendChild(document.createElement('br')); } tipLine(stars(c.level), 'stars'); tipLine(` ${STAGES[c.level]}${c.pers ? ' · ' + PERS[c.pers] : ''} · ${moodText(c)}`, 'm'); const fr = c.friend && creatures.find(o => o.id === c.friend); if (fr){ tip.appendChild(document.createElement('br')); tipLine(`Ami de ${fr.name}`, 'm'); } }
   else tipLine(`${TYPES[c.type].label}`, 'm');
   tip.classList.add('on'); moveTip(x, y);
 }
@@ -4609,7 +4764,7 @@ const askYesNo = (text, yes) => askDialog({ title: 'Confirmer', text, yes: yes |
 const askText = (title, def) => askDialog({ title, input: true, def, yes: 'Valider', no: 'Annuler' });
 
 /* ---------- Fenêtres ---------- */
-const MODALS = ['shop', 'carnet', 'settings', 'order', 'sheet', 'photo'];
+const MODALS = ['shop', 'carnet', 'settings', 'order', 'sheet', 'photo', 'note'];
 function closeModals(){ MODALS.forEach(id => { $('#' + id).hidden = true; }); }
 function openModal(id){ closeModals(); deselect(); $('#' + id).hidden = false; }
 MODALS.forEach(id => $('#' + id).addEventListener('pointerdown', e => { if (e.target.id === id) closeModals(); }));
@@ -4701,6 +4856,7 @@ function initUI(){
   on('#coinPill', 'click', () => openShop()); on('#clientHint', 'click', openOrder);
   on('#sfxOn', 'change', e => { settings.sfx = e.target.checked; Snd.wake(); saveSoon(); });
   on('#musicOn', 'change', e => { settings.music = e.target.checked; Snd.wake(); saveSoon(); });
+  on('#guestOn', 'change', e => { settings.guests = e.target.checked; saveSoon(); }); on('#rotOn', 'change', e => { settings.rotation = e.target.checked; saveSoon(); }); on('#noteOk', 'click', closeModals);
   on('#vol', 'input', e => { settings.vol = e.target.value / 100; Snd.apply(); saveSoon(); });
   on('#btnRelax', 'click', () => setRelax(true)); on('#relaxExit', 'click', () => setRelax(false));
   on('#btnExport', 'click', () => download(new Blob([JSON.stringify(stateObj())], { type: 'application/json' }), 'mon-aquarium.dessinarium.json'));
