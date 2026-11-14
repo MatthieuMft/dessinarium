@@ -322,6 +322,7 @@ input[type=range]{width:100%;accent-color:#a67ae8;min-width:0}
   .win.ed .ed-grid{display:flex;flex-direction:column;flex:1;min-height:0;gap:8px;align-items:stretch}
   .win.ed .ed-main{position:static;flex:1;min-height:0;display:flex;flex-direction:column;border:0;padding:0;background:none;z-index:auto}
   .win.ed .stage{flex:1;min-height:0;justify-content:center}
+  .win.ed .ed-main,.win.ed .stage{touch-action:none}
   .win.ed .zoombar{top:auto;bottom:8px;right:8px;gap:0;padding:2px;background:rgba(18,13,27,.82);backdrop-filter:blur(4px);z-index:3}
   .win.ed .zoombar button{height:42px;min-width:44px;font-size:20px;font-weight:700;padding:0 4px}
   .win.ed .zoombar #zFit{font-size:13px;min-width:54px}
@@ -3527,6 +3528,8 @@ function initEditor(){
   $('#edClose').addEventListener('click', closeEditor);
   $('#advClose').addEventListener('click', () => { $('.adv').open = false; });
   window.addEventListener('orientationchange', () => setTimeout(fitPad, 250));
+  // Pincer = zoomer le dessin, jamais la page (iOS Safari envoie des événements « gesture »).
+  ['gesturestart', 'gesturechange', 'gestureend'].forEach(n => document.addEventListener(n, e => { if (editorOpen()) e.preventDefault(); }, { passive: false }));
   $('#editor').addEventListener('pointerdown', e => { if (e.target === $('#editor')) closeEditor(); });
   window.addEventListener('resize', fitPad);
   window.addEventListener('keydown', e => {
