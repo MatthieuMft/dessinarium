@@ -810,12 +810,18 @@ const PERS = { timide:'Timide', curieux:'Curieux', gourmand:'Gourmand', solitair
 const NAMES = ['Nox','Morrigan','Corbeau','Hécate','Vesper','Salem','Lilith','Nyx','Cendre','Poe','Belladone','Spectre','Ombrelune','Raven','Morticia','Ténèbre','Orphée','Sépulcre'];
 
 const THEMES = [
-  { id:'abysses',   n:'Abysses',           top:'#1b2150', bot:'#04030b', sand:'#2d2838', floor:'sand', light:.62, part:'glow',     price:0 },
-  { id:'brume',     n:'Marais brumeux',    top:'#4f6a62', bot:'#0b1613', sand:'#37402f', floor:'sand', light:.62, part:'plankton', price:100 },
-  { id:'sang',      n:'Lune de sang',      top:'#7a1328', bot:'#15030a', sand:'#331419', floor:'sand', light:.6,  part:'ember',    price:300 },
-  { id:'amethyste', n:'Nuit d’améthyste',  top:'#5a3d9a', bot:'#0a0620', sand:'#262036', floor:'sand', light:.66, part:'ice',      price:500 }
+  { id:'abysses',   n:'Cathédrale engloutie',  top:'#1b2150', bot:'#04030b', sand:'#2d2838', floor:'sand',    light:.62, part:'glow',     price:0,   scene:'gothic',   pf:'#5b4d9c', pm:'#241a54', fog:'150,130,215' },
+  { id:'gouffre',   n:'Le Gouffre',            top:'#062033', bot:'#010509', sand:'#10222e', floor:'pebbles', light:.5,  part:'glow',     price:220, scene:'gouffre',  pf:'#1c5a6e', pm:'#0b2a36', fog:'80,200,200' },
+  { id:'pirate',    n:'Cimetière des galions', top:'#0b3a45', bot:'#03141a', sand:'#4a3a28', floor:'deck',    light:.6,  part:'plankton', price:320, scene:'pirate',   pf:'#10303a', pm:'#061c24', fog:'110,190,190' },
+  { id:'rlyeh',     n:'R’lyeh',                top:'#0d3a30', bot:'#020c09', sand:'#14281f', floor:'slime',   light:.5,  part:'glow',     price:420, scene:'rlyeh',    pf:'#2c8a6c', pm:'#081f18', fog:'90,200,150' },
+  { id:'brume',     n:'Marais brumeux',        top:'#4f6a62', bot:'#0b1613', sand:'#37402f', floor:'sand',    light:.62, part:'plankton', price:100, scene:'gothic',   pf:'#6a9684', pm:'#2a4a3e', fog:'160,200,180' },
+  { id:'sang',      n:'Lune de sang',          top:'#7a1328', bot:'#15030a', sand:'#331419', floor:'sand',    light:.6,  part:'ember',    price:300, scene:'gothic',   pf:'#a8444f', pm:'#4a1420', fog:'210,110,120' },
+  { id:'amethyste', n:'Nuit d’améthyste',      top:'#5a3d9a', bot:'#0a0620', sand:'#262036', floor:'sand',    light:.66, part:'ice',      price:500, scene:'gothic',   pf:'#9a6ad8', pm:'#3a2470', fog:'190,150,240' },
+  { id:'terre',     n:'Terre du Milieu',       top:'#16392a', bot:'#030d07', sand:'#2f3d22', floor:'moss',    light:.7,  part:'plankton', price:480, scene:'terre',    pf:'#10241a', pm:'#08150c', fog:'210,230,150' },
+  { id:'mordor',    n:'Mordor',                top:'#33100c', bot:'#070203', sand:'#1c1210', floor:'lava',    light:.5,  part:'ember',    price:560, scene:'mordor',   pf:'#0c0405', pm:'#050102', fog:'150,50,30' },
+  { id:'mustafar',  n:'Mustafar',              top:'#4a1608', bot:'#0a0302', sand:'#201210', floor:'basalt',  light:.55, part:'ember',    price:560, scene:'mustafar', pf:'#0b0403', pm:'#040101', fog:'255,130,60' }
 ];
-const FLOORS = [['sand','Cendres',0], ['pebbles','Galets noirs',50], ['mud','Vase',100], ['bones','Ossements',160]];
+const FLOORS = [['sand','Cendres',0], ['pebbles','Galets noirs',50], ['mud','Vase',100], ['bones','Ossements',160], ['cobble','Pavés gothiques',120], ['deck','Pont de navire',140], ['moss','Mousse dorée',140], ['slime','Vase verte',160], ['lava','Roche en fusion',180], ['basalt','Basalte noir',180], ['gold','Or englouti',200]];
 const FRAMES = [['glass','Verre',0], ['none','Sans cadre',0], ['stone','Pierre',120], ['iron','Fer forgé',200], ['ogive','Ogive',260]];
 const FRAME_PX = { glass:0, none:0, stone:16, iron:14, ogive:26 };
 const KEY = 'dessinarium.v1';
@@ -1895,8 +1901,8 @@ const BRUSH_ITEMS = [
 const MEDIUM_PRICE = { gravure:0, natural:0, gouache:100, aquarelle:150, feutre:150, fusain:200, crayon:150 };
 const MEDIUM_DESC = { gravure:'La patte de la maison : palette sourde, ombres violettes, contour d’encre. Tout l’aquarium parle la même langue.', natural:'Tes dessins, exactement comme tu les as faits.', gouache:'Couleurs mates et opaques, légères traces de pinceau.', aquarelle:'Bords qui bavent, pigments granuleux, couleurs lavées.',
   feutre:'Couleurs vives et franches, petites rayures de feutre.', fusain:'Noir et blanc brut, grain du papier et traits estompés.', crayon:'Hachures fines et grain de crayon de couleur.' };
-const THEME_DESC = { abysses:'Noir profond et lueurs qui flottent. Le thème de départ.', brume:'Un marais gris-vert où la brume ne se lève jamais.', sang:'Une lune rouge, des braises qui montent.', amethyste:'Une nuit violette où tombent des cendres.' };
-const FLOOR_DESC = { sand:'De la cendre froide.', pebbles:'Des galets noirs et lisses.', mud:'De la vase sombre pleine de bulles.', bones:'Un sol d’ossements et de crânes.' };
+const THEME_DESC = { abysses:'Une cathédrale engloutie, des vitraux qui brûlent encore. Le thème de départ.', gouffre:'Le fond du fond : cheminées brûlantes, vers luisants, méduses fantômes.', pirate:'Des épaves de galions, des ancres rouillées, des lanternes encore accrochées aux mâts. Pont de navire inclus.', rlyeh:'Une cité aux angles faux, des tentacules endormis sous la vase. Quelque chose rêve ici. Vase verte incluse.', brume:'Un marais gris-vert où la brume ne se lève jamais.', sang:'Une lune rouge, des braises qui montent.', amethyste:'Une nuit violette où tombent des cendres.', terre:'Des arbres d’or, des lanternes elfiques, une forêt entière sous la surface. Mousse dorée incluse.', mordor:'Des montagnes noires, une tour qui regarde, une montagne qui brûle. Roche en fusion incluse.', mustafar:'Des rivières de lave, des plates-formes noires, un ciel de soufre. Basalte noir inclus.' };
+const FLOOR_DESC = { sand:'De la cendre froide.', pebbles:'Des galets noirs et lisses.', mud:'De la vase sombre pleine de bulles.', bones:'Un sol d’ossements et de crânes.', cobble:'Des pavés de cathédrale, couverts de mousse.', deck:'Les planches d’un pont de navire, clous rouillés compris.', moss:'Une mousse épaisse piquetée de lueurs dorées.', slime:'Une vase verte qui luit dans le noir.', lava:'Une croûte noire fendue de lave vive.', basalt:'Des colonnes de basalte, orange dans les interstices.', gold:'Un lit de pièces et de gemmes, de quoi ruiner un roi.' };
 const FRAME_DESC = { glass:'La vitre classique.', none:'Aucun cadre : les abysses vont jusqu’au bord.', stone:'Un cadre de pierre taillée.', iron:'Du fer forgé, lourd et froid.', ogive:'Une fenêtre de cathédrale en ogive.' };
 const CAP_PRICES = [120, 240, 400, 620, 900, 1250];
 const LAMP_PRICE = 140, SCENE_PRICE = 220;
@@ -1956,10 +1962,10 @@ function brushThumb(id){
 function shopItems(tab){
   const out = [];
   if (tab === 'themes') THEMES.forEach(t => { const id = 'theme:' + t.id, own = owns(id);
-    out.push({ id, name: t.n, desc: THEME_DESC[t.id], price: t.price, own, active: settings.theme === t.id, css: `linear-gradient(${t.top},${t.bot})`,
-      act: () => { if (!own && !purchase(id, t.price)) return; const prev = settings.floor; applyTheme(t.id); if (!owns('floor:' + settings.floor)){ settings.floor = prev; buildBg(); } uiShopRefresh(); } }); });
+    out.push({ id, name: t.n, desc: THEME_DESC[t.id], price: t.price, own, active: settings.theme === t.id, img: themeThumb(t),
+      act: () => { if (!own && !purchase(id, t.price)) return; if (t.floor) state.owned.add('floor:' + t.floor); const prev = settings.floor; applyTheme(t.id); if (!owns('floor:' + settings.floor)){ settings.floor = prev; buildBg(); } uiShopRefresh(); } }); });
   else if (tab === 'floors') FLOORS.forEach(([k, n, p]) => { const id = 'floor:' + k, own = owns(id);
-    out.push({ id, name: n, desc: FLOOR_DESC[k], price: p, own, active: settings.floor === k, css: `linear-gradient(${settings.waterBot} 0 20%, ${settings.sandColor} 20%)`,
+    out.push({ id, name: n, desc: FLOOR_DESC[k], price: p, own, active: settings.floor === k, img: floorThumb(k),
       act: () => { if (!own && !purchase(id, p)) return; settings.floor = k; buildBg(); saveSoon(); uiShopRefresh(); } }); });
   else if (tab === 'frames') FRAMES.forEach(([k, n, p]) => { const id = 'frame:' + k, own = owns(id);
     out.push({ id, name: n, desc: FRAME_DESC[k], price: p, own, active: settings.frame === k, frameKind: k,
@@ -5122,6 +5128,211 @@ function drawFood(f){
   ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.fillStyle = 'rgba(255,248,232,.7)'; ctx.beginPath(); ctx.ellipse(-s * .25, -s * .25, s * .3, s * .14, -.4, 0, TAU); ctx.fill(); ctx.restore();
 }
 settings.rays = false;
+if (typeof W !== 'undefined' && W){ buildBg(); }
+
+</script>
+<script>
+/* =====================================================================
+   Thèmes scéniques et sols : chaque thème est un vrai décor de fond
+   (plans de silhouettes, lumières, brume) peint dans la même technique fusain.
+   Chargé après da2.js : redéfinit buildBg / drawFloor.
+   ===================================================================== */
+const SCENES = {};
+const themeNow = () => THEMES.find(t => t.id === settings.theme) || THEMES[0];
+const glowAt = (g, x, y, r, rgb, a) => { g.save(); g.globalCompositeOperation = 'lighter'; const gr = g.createRadialGradient(x, y, 0, x, y, r); gr.addColorStop(0, `rgba(${rgb},${a})`); gr.addColorStop(1, `rgba(${rgb},0)`); g.fillStyle = gr; g.fillRect(x - r, y - r, r * 2, r * 2); g.restore(); };
+function fogBand(g, y, a, hgt, rgb){ g.save(); g.translate(W / 2, y); g.scale(1, hgt / (W * .5)); const gr = g.createRadialGradient(0, 0, 0, 0, 0, W * .62); gr.addColorStop(0, `rgba(${rgb},${a})`); gr.addColorStop(1, `rgba(${rgb},0)`); g.fillStyle = gr; g.beginPath(); g.arc(0, 0, W * .62, 0, TAU); g.fill(); g.restore(); }
+function shafts(g, rgb, k, xs){
+  for (const [x, w, a] of (xs || [[.2, .16, .07], [.52, .22, .06], [.8, .12, .05]])) for (let i = 0; i < 6; i++){
+    const sw = w * W * (1 + i * .22), cx = x * W, gr = g.createLinearGradient(0, 0, 0, H * .85); gr.addColorStop(0, `rgba(${rgb},${a * k / 6 * (1 - i * .1)})`); gr.addColorStop(1, `rgba(${rgb},0)`);
+    g.fillStyle = gr; g.beginPath(); g.moveTo(cx - sw * .25, 0); g.lineTo(cx + sw * .25, 0); g.lineTo(cx + sw * .8 + W * .08, H * .85); g.lineTo(cx - sw * .8 + W * .08, H * .85); g.closePath(); g.fill();
+  }
+}
+/* ---------- formes ---------- */
+function shapeSpire(g, x, base, h, w){ g.beginPath(); g.moveTo(x - w, base + 4); g.lineTo(x - w * .45, base - h * .62); g.lineTo(x - w * .1, base - h); g.lineTo(x + w * .3, base - h * .78); g.lineTo(x + w * .55, base - h * .4); g.lineTo(x + w, base + 4); g.closePath(); g.fill(); }
+function shapeVent(g, x, base, h, s){ g.beginPath(); g.moveTo(x - 38 * s, base); g.lineTo(x - 15 * s, base - h); g.lineTo(x + 3 * s, base - h - 8 * s); g.lineTo(x + 17 * s, base - h + 4 * s); g.lineTo(x + 40 * s, base); g.closePath(); g.fill(); }
+function shapeTentacle(g, x0, base, h, s, ph){
+  for (let t = 0; t <= 1; t += .018){ const x = x0 + Math.sin(t * 4.2 + ph) * 58 * s * t + Math.sin(t * 11 + ph) * 6 * s, y = base - h * t, rr = (20 * (1 - t) + 2.5) * s; g.beginPath(); g.arc(x, y, rr, 0, TAU); g.fill(); }
+}
+function shapeMonolith(g, cx, base, w, h, skew){ g.beginPath(); g.moveTo(cx - w / 2, base + 4); g.lineTo(cx - w / 2 + skew, base - h); g.lineTo(cx + w / 2 + skew * 1.4, base - h * .93); g.lineTo(cx + w / 2, base + 4); g.closePath(); g.fill(); }
+function shapeWreck(g, cx, base, s, tilt){
+  const L = [], P = (x, y) => [cx + (x * Math.cos(tilt) - y * Math.sin(tilt)) * s, base + (x * Math.sin(tilt) + y * Math.cos(tilt)) * s];
+  g.save(); g.translate(cx, base); g.rotate(tilt); g.scale(s, s);
+  g.beginPath(); g.moveTo(-170, -34); g.lineTo(-120, 40); g.lineTo(130, 44); g.lineTo(182, -58); g.lineTo(132, -46); g.lineTo(104, -76); g.lineTo(-24, -66); g.lineTo(-86, -48); g.closePath(); g.fill();
+  g.fillRect(-14, -250, 12, 200); g.fillRect(78, -196, 10, 150); g.fillRect(-120, -140, 8, 100);
+  g.beginPath(); g.moveTo(-14, -240); g.lineTo(-100, -226); g.lineTo(-92, -180); g.lineTo(-104, -150); g.lineTo(-78, -138); g.lineTo(-96, -96); g.lineTo(-14, -98); g.closePath(); g.fill();   // voile déchirée
+  g.beginPath(); g.moveTo(-2, -236); g.lineTo(60, -222); g.lineTo(52, -170); g.lineTo(66, -132); g.lineTo(40, -120); g.lineTo(-2, -128); g.closePath(); g.fill();
+  g.beginPath(); g.moveTo(88, -190); g.lineTo(140, -176); g.lineTo(130, -130); g.lineTo(88, -136); g.closePath(); g.fill();
+  g.lineWidth = 3; g.lineCap = 'round'; g.beginPath(); g.moveTo(-8, -250); g.lineTo(-170, -34); g.moveTo(-8, -250); g.lineTo(100, -76); g.moveTo(84, -196); g.lineTo(182, -58); g.stroke();   // haubans
+  g.beginPath(); g.rect(-24, -270, 30, 22); g.fill();
+  g.globalCompositeOperation = 'destination-out'; for (const x of [-60, -10, 40, 90]){ g.beginPath(); g.arc(x, -22, 9, 0, TAU); g.fill(); L.push(P(x, -22)); }
+  g.beginPath(); g.arc(-37, -260, 6, 0, TAU); g.fill(); g.fillRect(-40, -258, 6, 6);                          // tête de mort du pavillon
+  g.globalCompositeOperation = 'source-over'; g.restore(); return L;
+}
+function shapeMallorn(g, x, base, h, s, r){
+  g.beginPath(); g.moveTo(x - 30 * s, base + 6); g.quadraticCurveTo(x - 14 * s, base - h * .3, x - 11 * s, base - h * .62); g.lineTo(x - 7 * s, base - h); g.lineTo(x + 7 * s, base - h); g.lineTo(x + 11 * s, base - h * .62); g.quadraticCurveTo(x + 14 * s, base - h * .3, x + 30 * s, base + 6); g.closePath(); g.fill();
+  const pts = []; for (let i = 0; i < 16; i++){ const a = i / 16 * TAU, rx = (90 + r() * 40) * s, cx = x + Math.cos(a) * rx * .9, cy = base - h - 10 * s + Math.sin(a) * rx * .55, rr = (38 + r() * 26) * s; g.beginPath(); g.arc(cx, cy, rr, 0, TAU); g.fill(); if (i % 4 === 0) pts.push([cx, cy + rr * .6]); }
+  g.beginPath(); g.arc(x, base - h, 70 * s, 0, TAU); g.fill();
+  g.lineWidth = 6 * s; g.lineCap = 'round'; g.beginPath(); g.moveTo(x - 8 * s, base - h * .7); g.quadraticCurveTo(x - 70 * s, base - h * .74, x - 110 * s, base - h * .62); g.moveTo(x + 8 * s, base - h * .55); g.quadraticCurveTo(x + 70 * s, base - h * .6, x + 105 * s, base - h * .5); g.stroke();
+  return pts;
+}
+function shapeRange(g, x0, x1, base, hgt, r){ g.beginPath(); g.moveTo(x0, base + 6); let x = x0; while (x < x1){ const pk = hgt * (.35 + r() * .65); g.lineTo(x + 20 + r() * 30, base - pk); x += 50 + r() * 70; g.lineTo(x, base - pk * (.25 + r() * .3)); } g.lineTo(x1 + 20, base + 6); g.closePath(); g.fill(); }
+function shapeVolcano(g, cx, base, w, h){ g.beginPath(); g.moveTo(cx - w, base + 6); g.lineTo(cx - w * .16, base - h); g.lineTo(cx - w * .05, base - h * .94); g.lineTo(cx + w * .06, base - h * 1.02); g.lineTo(cx + w * .18, base - h); g.lineTo(cx + w, base + 6); g.closePath(); g.fill(); return [cx, base - h]; }
+function shapeBarad(g, cx, base, s){
+  const tiers = [[120, 70], [96, 80], [74, 80], [54, 70], [38, 60]]; let y = base;
+  for (const [w, h] of tiers){ g.beginPath(); g.moveTo(cx - w * s / 2, y); g.lineTo(cx - w * s * .4, y - h * s); g.lineTo(cx + w * s * .4, y - h * s); g.lineTo(cx + w * s / 2, y); g.closePath(); g.fill(); y -= h * s * .92; }
+  for (const [dx, hh] of [[-36, 60], [-18, 90], [0, 130], [18, 80], [36, 54]]){ g.beginPath(); g.moveTo(cx + (dx - 7) * s, y + 8 * s); g.lineTo(cx + dx * s, y - hh * s); g.lineTo(cx + (dx + 7) * s, y + 8 * s); g.closePath(); g.fill(); }
+  return [cx, y - 20 * s];
+}
+function shapePylon(g, x, base, h, s){ g.beginPath(); g.moveTo(x - 26 * s, base + 4); g.lineTo(x - 18 * s, base - h); g.lineTo(x + 6 * s, base - h - 12 * s); g.lineTo(x + 22 * s, base - h + 6 * s); g.lineTo(x + 30 * s, base + 4); g.closePath(); g.fill(); }
+function shapePlatform(g, x, y, w, s){ g.fillRect(x - w / 2, y, w, 10 * s); g.fillRect(x - w * .42, y + 10 * s, 7 * s, 70 * s); g.fillRect(x + w * .34, y + 10 * s, 7 * s, 70 * s); g.fillRect(x - 3 * s, y - 44 * s, 5 * s, 44 * s); g.fillRect(x + w * .3, y - 20 * s, 18 * s, 20 * s); g.fillRect(x - w * .4, y - 12 * s, 30 * s, 12 * s); }
+function shapeCrate(g, x, base, s){ g.fillRect(x - 22 * s, base - 30 * s, 44 * s, 32 * s); g.beginPath(); g.ellipse(x + 50 * s, base - 16 * s, 16 * s, 20 * s, 0, 0, TAU); g.fill(); }
+
+/* ---------- décors de fond ---------- */
+SCENES.gothic = (g, S) => {
+  const { T, u, r, base } = S; let lights = [];
+  da2Plane(g, tg => {
+    lights = shapeCathedral(tg, W * (.2 + r() * .08), base - 6, 1.05 * u); shapeRuinArch(tg, W * (.52 + r() * .06), base - 6, 1.1 * u); shapeRibs(tg, W * (.82 + r() * .05), base - 6, 1.15 * u);
+    shapeStele(tg, W * .38, base - 4, 1 * u); shapeStele(tg, W * .67, base - 4, .8 * u); shapeStele(tg, W * .95, base - 4, 1.1 * u);
+  }, T.pf, shade(T.pf, .4), .78, .5, base - 360 * u, base);
+  for (const [lx, ly] of lights){ glowAt(g, lx, ly, 34 * u, '255,170,100', .5); g.fillStyle = 'rgba(255,224,170,.85)'; g.beginPath(); g.ellipse(lx, ly, 3 * u, 5 * u, 0, 0, TAU); g.fill(); }
+  fogBand(g, base - 70 * u, .2, 90 * u, T.fog);
+  da2Plane(g, tg => { shapeChain(tg, W * .1, H * .2, u * .9); shapeChain(tg, W * .46, H * .13, u * .8); shapeChain(tg, W * .9, H * .26, u); }, shade(T.pf, .5), shade(T.pf, .22), .42, .3, 0, H * .5);
+  da2Plane(g, tg => { for (let i = 0; i < 7; i++) shapeKelp(tg, W * (i / 6) + (r() - .5) * 60, base, (120 + r() * 160) * u, u, r() * 6); shapeRocks(tg, W * .3, base + 6, 1.1 * u, r); shapeRocks(tg, W * .72, base + 8, 1.3 * u, r); }, shade(T.pf, .34), shade(T.pf, .14), .82, .45, base - 280 * u, base);
+  fogBand(g, base - 20 * u, .12, 60 * u, T.fog);
+};
+SCENES.gouffre = (g, S) => {
+  const { T, u, r, base } = S;
+  shafts(g, '120,230,220', .5, [[.3, .12, .05], [.7, .14, .05]]);
+  da2Plane(g, tg => { for (let i = 0; i < 6; i++) shapeSpire(tg, W * (.05 + i * .19 + (r() - .5) * .05), base, (160 + r() * 200) * u, (28 + r() * 30) * u); shapeRibs(tg, W * .56, base - 4, 1.4 * u); }, T.pf, shade(T.pf, .3), .72, .5, base - 400 * u, base);
+  fogBand(g, base - 60 * u, .16, 90 * u, '60,200,190');
+  const vx = [.2, .5, .8], tops = [];
+  da2Plane(g, tg => { vx.forEach((f, i) => { const h = (90 + r() * 70) * u; shapeVent(tg, W * f, base + 6, h, u * 1.1); tops.push([W * f, base - h]); tg.lineWidth = 2.4 * u; tg.lineCap = 'round'; for (let k = 0; k < 16; k++){ const x = W * f + (r() - .5) * 120 * u, hh = (16 + r() * 34) * u; tg.beginPath(); tg.moveTo(x, base + 4); tg.quadraticCurveTo(x + (r() - .5) * 14, base - hh * .6, x + (r() - .5) * 20, base - hh); tg.stroke(); } }); shapeRocks(tg, W * .08, base + 6, 1.2 * u, r); shapeRocks(tg, W * .94, base + 6, 1.1 * u, r); }, T.pm, '#02070b', .92, .4, base - 220 * u, base);
+  for (const [x, y] of tops){
+    const cg = g.createLinearGradient(0, y, 0, y - 320 * u); cg.addColorStop(0, 'rgba(110,230,215,.2)'); cg.addColorStop(1, 'rgba(110,230,215,0)'); g.fillStyle = cg; g.beginPath(); g.moveTo(x - 18 * u, y); g.bezierCurveTo(x - 50 * u, y - 120 * u, x + 40 * u, y - 200 * u, x - 60 * u, y - 320 * u); g.lineTo(x + 90 * u, y - 320 * u); g.bezierCurveTo(x + 10 * u, y - 200 * u, x + 70 * u, y - 120 * u, x + 22 * u, y); g.closePath(); g.fill();
+    glowAt(g, x, y, 70 * u, '255,140,60', .5); glowAt(g, x, y, 120 * u, '90,255,220', .18);
+  }
+  for (let i = 0; i < 7; i++){ const x = r() * W, y = H * (.12 + r() * .4), rr = (22 + r() * 26) * u; glowAt(g, x, y, rr * 2, i % 2 ? '120,200,255' : '190,130,255', .22); g.strokeStyle = 'rgba(200,235,255,.35)'; g.lineWidth = 1.6; g.beginPath(); g.arc(x, y, rr * .5, Math.PI, 0); g.stroke(); for (let k = -2; k <= 2; k++){ g.beginPath(); g.moveTo(x + k * rr * .2, y); g.quadraticCurveTo(x + k * rr * .3 + 4, y + rr * .6, x + k * rr * .2, y + rr); g.stroke(); } }
+};
+SCENES.pirate = (g, S) => {
+  const { T, u, r, base } = S; let L1 = [], L2 = [];
+  shafts(g, '150,230,230', .6);
+  da2Plane(g, tg => { L1 = shapeWreck(tg, W * .26, base + 4, 1.05 * u, -.1); L2 = shapeWreck(tg, W * .8, base + 4, .78 * u, .14); }, T.pf, shade(T.pf, .35), .78, .5, base - 360 * u, base);
+  for (const [lx, ly] of L1.concat(L2)){ glowAt(g, lx, ly, 30 * u, '255,180,90', .5); g.fillStyle = 'rgba(255,226,160,.9)'; g.beginPath(); g.arc(lx, ly, 3 * u, 0, TAU); g.fill(); }
+  fogBand(g, base - 60 * u, .18, 90 * u, T.fog);
+  da2Plane(g, tg => { shapeChain(tg, W * .08, H * .22, u * .9); shapeChain(tg, W * .52, H * .16, u * .7); shapeChain(tg, W * .94, H * .3, u); }, shade(T.pf, .5), shade(T.pf, .2), .42, .3, 0, H * .5);
+  da2Plane(g, tg => { shapeRocks(tg, W * .12, base + 8, 1.1 * u, r); shapeRocks(tg, W * .62, base + 8, 1.4 * u, r); shapeCrate(tg, W * .4, base + 4, u); shapeCrate(tg, W * .9, base + 4, .9 * u); for (let i = 0; i < 5; i++) shapeKelp(tg, W * (.05 + i * .22) + r() * 40, base, (60 + r() * 90) * u, u * .8, r() * 6); }, shade(T.pf, .3), shade(T.pf, .12), .86, .45, base - 200 * u, base);
+  glowAt(g, W * .56, base - 6 * u, 80 * u, '255,200,90', .38);
+  fogBand(g, base - 14 * u, .12, 50 * u, T.fog);
+};
+SCENES.rlyeh = (g, S) => {
+  const { T, u, r, base } = S; const monos = [[.16, 56, 230, 40], [.4, 70, 300, -50], [.62, 60, 260, 46], [.86, 74, 320, -42]];
+  shafts(g, '120,255,170', .35, [[.45, .2, .05]]);
+  da2Plane(g, tg => { for (let i = 0; i < 4; i++) shapeTentacle(tg, W * (.1 + i * .26 + (r() - .5) * .04), base + 6, (240 + r() * 150) * u, u, i * 1.9); }, T.pf, shade(T.pf, .3), .64, .5, base - 440 * u, base);
+  fogBand(g, base - 70 * u, .2, 100 * u, '90,200,150');
+  da2Plane(g, tg => { for (const [f, w, h, sk] of monos) shapeMonolith(tg, W * f, base, w * u, h * u, sk * u); shapeMonolith(tg, W * .5, base, 150 * u, 60 * u, 30 * u); }, T.pm, '#020807', .94, .5, base - 330 * u, base);
+  g.save(); g.lineCap = 'round'; for (const [f, w, h, sk] of monos){ const x = W * f + sk * u * .5, y = base - h * u * .55; glowAt(g, x, y, 70 * u, '70,255,150', .22); g.strokeStyle = 'rgba(110,255,170,.6)'; g.lineWidth = 2 * u; g.beginPath(); g.arc(x, y, 15 * u, 0, TAU); g.moveTo(x - 22 * u, y); g.lineTo(x + 22 * u, y); g.moveTo(x, y - 22 * u); g.lineTo(x, y + 22 * u); g.moveTo(x - 9 * u, y - 9 * u); g.lineTo(x + 9 * u, y + 9 * u); g.stroke(); for (let k = 0; k < 5; k++){ g.beginPath(); g.arc(x + (k - 2) * 12 * u, y + 34 * u, 2.2 * u, 0, TAU); g.stroke(); } } g.restore();
+  fogBand(g, base - 12 * u, .16, 50 * u, '80,190,140');
+};
+SCENES.terre = (g, S) => {
+  const { T, u, r, base } = S; let lights = [];
+  shafts(g, '255,215,130', 1.5, [[.18, .18, .09], [.46, .24, .09], [.74, .18, .08]]);
+  const trees = [[.1, 300], [.34, 380], [.63, 340], [.9, 290]];
+  da2Plane(g, tg => { for (const [f, h] of trees) lights = lights.concat(shapeMallorn(tg, W * f, base + 6, h * u, u, r)); }, T.pf, shade(T.pf, .35), .78, .5, base - 560 * u, base);
+  for (const [f, h] of trees) glowAt(g, W * f, base - h * u, 180 * u, '255,205,100', .2);
+  for (const [lx, ly] of lights){ glowAt(g, lx, ly, 26 * u, '255,220,120', .55); g.fillStyle = 'rgba(255,240,190,.9)'; g.beginPath(); g.arc(lx, ly, 2.6 * u, 0, TAU); g.fill(); g.strokeStyle = 'rgba(30,24,8,.7)'; g.lineWidth = 1.4; g.beginPath(); g.moveTo(lx, ly - 22 * u); g.lineTo(lx, ly - 3 * u); g.stroke(); }
+  fogBand(g, base - 60 * u, .18, 90 * u, '210,230,150');
+  da2Plane(g, tg => { for (let i = 0; i < 9; i++){ tg.lineWidth = 7 * u; tg.lineCap = 'round'; const x = W * (i / 8) + (r() - .5) * 50, h = (90 + r() * 120) * u; tg.beginPath(); tg.moveTo(x, base + 4); tg.bezierCurveTo(x - 30 * u, base - h * .5, x + 40 * u, base - h * .8, x + (r() - .5) * 90 * u, base - h); tg.stroke(); } shapeRocks(tg, W * .5, base + 8, 1.2 * u, r); }, shade(T.pf, .4), shade(T.pf, .14), .85, .4, base - 260 * u, base);
+  glowAt(g, W * .5, base - 8 * u, 100 * u, '255,220,130', .22);
+};
+SCENES.mordor = (g, S) => {
+  const { T, u, r, base } = S; let crater = [0, 0], eye = [0, 0];
+  glowAt(g, W * .6, base - 160 * u, 420 * u, '255,70,20', .22);
+  da2Plane(g, tg => { shapeRange(tg, -30, W * .35, base, 260 * u, r); shapeRange(tg, W * .85, W + 30, base, 230 * u, r); crater = shapeVolcano(tg, W * .6, base, 220 * u, 300 * u); eye = shapeBarad(tg, W * .22, base - 30 * u, 1.05 * u); }, T.pf, shade(T.pf, .3), .86, .5, base - 460 * u, base);
+  glowAt(g, crater[0], crater[1], 150 * u, '255,110,30', .6); glowAt(g, crater[0], crater[1] + 20 * u, 70 * u, '255,210,100', .5);
+  g.save(); g.globalCompositeOperation = 'lighter'; g.strokeStyle = 'rgba(255,110,30,.5)'; g.lineWidth = 3 * u; g.lineCap = 'round'; for (let k = 0; k < 4; k++){ g.beginPath(); g.moveTo(crater[0] + (k - 1.5) * 4 * u, crater[1] + 4 * u); g.bezierCurveTo(crater[0] + (k - 1.5) * 40 * u, crater[1] + 60 * u, crater[0] + (k - 1.5) * 20 * u, crater[1] + 120 * u, crater[0] + (k - 1.5) * 80 * u, base - 4); g.stroke(); } g.restore();
+  g.save(); g.globalCompositeOperation = 'lighter'; const eg = g.createRadialGradient(eye[0], eye[1], 0, eye[0], eye[1], 60 * u); eg.addColorStop(0, 'rgba(255,200,60,.9)'); eg.addColorStop(.3, 'rgba(255,100,20,.5)'); eg.addColorStop(1, 'rgba(255,60,10,0)'); g.fillStyle = eg; g.beginPath(); g.arc(eye[0], eye[1], 60 * u, 0, TAU); g.fill(); g.restore();
+  g.fillStyle = '#0a0302'; g.beginPath(); g.ellipse(eye[0], eye[1], 5 * u, 20 * u, 0, 0, TAU); g.fill();
+  fogBand(g, base - 40 * u, .22, 100 * u, '120,40,30');
+  da2Plane(g, tg => { for (let i = 0; i < 12; i++){ tg.lineWidth = (5 + r() * 4) * u; tg.lineCap = 'round'; const x = W * (i / 11) + (r() - .5) * 40, h = (60 + r() * 120) * u; tg.beginPath(); tg.moveTo(x, base + 4); tg.lineTo(x + (r() - .5) * 20 * u, base - h * .5); tg.lineTo(x + (r() - .5) * 50 * u, base - h); tg.stroke(); } shapeRocks(tg, W * .38, base + 8, 1.3 * u, r); }, shade(T.pf, .4), '#050102', .9, .45, base - 220 * u, base);
+  fogBand(g, base - 10 * u, .16, 50 * u, '150,50,30');
+};
+SCENES.mustafar = (g, S) => {
+  const { T, u, r, base } = S; const falls = [.16, .44, .84];
+  glowAt(g, W * .5, -H * .05, H * .9, '255,120,40', .22);
+  da2Plane(g, tg => { for (const f of [.08, .3, .55, .78, .94]) shapePylon(tg, W * f, base, (170 + r() * 160) * u, u * 1.1); shapePlatform(tg, W * .2, base - 250 * u, 190 * u, u); shapePlatform(tg, W * .68, base - 320 * u, 230 * u, u); tg.fillRect(W * .2, base - 246 * u, W * .48, 6 * u); }, T.pf, shade(T.pf, .25), .88, .5, base - 420 * u, base);
+  g.save(); g.globalCompositeOperation = 'lighter'; for (const f of falls){ const x = W * f, gr = g.createLinearGradient(0, base - 330 * u, 0, base); gr.addColorStop(0, 'rgba(255,170,60,.0)'); gr.addColorStop(.3, 'rgba(255,150,50,.5)'); gr.addColorStop(1, 'rgba(255,80,20,.75)'); g.fillStyle = gr; g.beginPath(); g.moveTo(x - 10 * u, base - 330 * u); g.lineTo(x + 12 * u, base - 330 * u); g.lineTo(x + 22 * u, base); g.lineTo(x - 18 * u, base); g.closePath(); g.fill(); } g.restore();
+  for (const f of falls) glowAt(g, W * f, base - 4, 110 * u, '255,100,30', .5);
+  for (const [px, py] of [[.2, 250], [.68, 320]]){ g.fillStyle = 'rgba(255,200,120,.85)'; for (let k = 0; k < 6; k++) g.fillRect(W * px - 80 * u + k * 22 * u, py > 0 ? base - py * u + 18 * u : 0, 7 * u, 4 * u); }
+  fogBand(g, base - 90 * u, .2, 120 * u, '255,130,60');
+  da2Plane(g, tg => { shapeRocks(tg, W * .1, base + 8, 1.2 * u, r); shapeRocks(tg, W * .4, base + 8, 1.5 * u, r); shapeRocks(tg, W * .7, base + 8, 1.2 * u, r); shapeRocks(tg, W * .96, base + 8, 1.1 * u, r); }, shade(T.pf, .4), '#050101', .94, .45, base - 180 * u, base);
+  glowAt(g, W * .5, base - 6 * u, W * .5, '255,90,20', .16);
+};
+
+/* ---------- le monde complet : fond + scène + sol ---------- */
+function paintWorld(g, T, floorKind, col, live){
+  g.lineJoin = g.lineCap = 'round';
+  const gr = g.createLinearGradient(0, 0, 0, H); gr.addColorStop(0, shade(col.top, .85)); gr.addColorStop(.55, shade(col.bot, 2.4)); gr.addColorStop(1, shade(col.bot, .9)); g.fillStyle = gr; g.fillRect(0, 0, W, H);
+  const pool = g.createRadialGradient(W * .5, -H * .05, 0, W * .5, -H * .05, H * .9); pool.addColorStop(0, `rgba(${T.fog},.22)`); pool.addColorStop(1, `rgba(${T.fog},0)`); g.fillStyle = pool; g.fillRect(0, 0, W, H);
+  if (T.scene === 'gothic') shafts(g, '200,185,255', 1);
+  const S = { T, u: clamp(H / 760, .55, 1.3), r: mulberry32(31), base: sandTop() + 10 };
+  if (live && scene.bg){ const im = scene.bg, k = Math.max(W / im.width, (H - sandH * .3) / im.height), dw = im.width * k, dh = im.height * k; g.globalAlpha = settings.bgAlpha; g.drawImage(im, (W - dw) / 2, H - dh - sandH * .3, dw, dh); g.globalAlpha = 1; }
+  else (SCENES[T.scene] || SCENES.gothic)(g, S);
+  drawFloor(g, floorKind, col.sand);
+  da2Vignette(g);
+}
+function buildBg(){
+  sandH = clamp(H * .21, 92, 200);
+  bg.width = Math.round(W * dpr); bg.height = Math.round(H * dpr);
+  const g = bg.getContext('2d'); g.setTransform(dpr, 0, 0, dpr, 0, 0);
+  paintWorld(g, themeNow(), settings.floor, { top: settings.waterTop, bot: settings.waterBot, sand: settings.sandColor }, true);
+  g.globalCompositeOperation = 'multiply'; g.globalAlpha = .4; g.fillStyle = g.createPattern(paperTile(), 'repeat'); g.fillRect(0, 0, W, H); g.globalCompositeOperation = 'source-over'; g.globalAlpha = 1;
+}
+function thumbWorld(T, floorKind, w, h, sf){
+  const oW = W, oH = H, oS = sandH; W = w; H = h; sandH = sf ? h * sf : clamp(h * .26, 34, 70);
+  try { const c = mkc(w, h), g = c.getContext('2d'); paintWorld(g, T, floorKind, { top: T.top, bot: T.bot, sand: T.sand }, false); g.globalCompositeOperation = 'multiply'; g.globalAlpha = .35; g.fillStyle = g.createPattern(paperTile(), 'repeat'); g.fillRect(0, 0, w, h); return c; }
+  finally { W = oW; H = oH; sandH = oS; }
+}
+const themeThumb = T => thumb('th:' + T.id, () => thumbWorld(T, T.floor, 320, 200));
+const floorThumb = k => thumb('fl:' + k, () => { const o = Object.assign({}, THEMES[0], { scene: 'none' }); return thumbWorld(o, k, 320, 200, .66); });
+SCENES.none = () => {};
+
+/* ---------- sols ---------- */
+const FLOOR_BASE = { cobble: '#3a3548', deck: '#4a3322', gold: '#3c2e12', lava: '#1c0f10', basalt: '#1a1618', moss: '#1d3422', slime: '#14281f' };
+function drawFloor(g, kind, sandCol){
+  kind = kind || settings.floor; const top = sandTop(), r = mulberry32(11 + (kind.length * 7)), base = FLOOR_BASE[kind] || sandCol || settings.sandColor, u = clamp(H / 760, .6, 1.2);
+  const edge = x => top + sandWave(x) * 1.7 + Math.sin(x * .05) * 2;
+  const path = () => { g.beginPath(); g.moveTo(-10, H + 4); for (let x = -10; x <= W + 12; x += 8) g.lineTo(x, edge(x)); g.lineTo(W + 12, H + 4); g.closePath(); };
+  const fg = g.createLinearGradient(0, top - 10, 0, H); fg.addColorStop(0, shade(base, 2.1)); fg.addColorStop(.3, shade(base, 1.3)); fg.addColorStop(1, '#07040f'); g.fillStyle = fg; path(); g.fill();
+  g.save(); path(); g.clip(); g.lineCap = 'round';
+  for (let i = 0; i < 9; i++){ const y = top + 8 + i * (sandH / 9), x = r() * W * .5; g.strokeStyle = r() < .5 ? 'rgba(200,185,235,.07)' : 'rgba(4,1,10,.28)'; g.lineWidth = 4 + r() * 9; g.beginPath(); g.moveTo(x, y); g.bezierCurveTo(x + W * .15, y + (r() - .5) * 8, x + W * .3, y + (r() - .5) * 8, x + W * (.4 + r() * .5), y + (r() - .5) * 6); g.stroke(); }
+  for (let i = 0; i < W / 34; i++){ const x = r() * W, y = top + 6 + r() * (sandH - 8), L = 8 + r() * 26; g.strokeStyle = r() < .6 ? 'rgba(4,1,10,.34)' : 'rgba(225,212,245,.12)'; g.lineWidth = 1.2 + r() * 1.4; g.beginPath(); g.moveTo(x, y); g.lineTo(x + L * .8, y - L * .5); g.stroke(); }
+  if (kind === 'cobble'){ const rh = 16 * u; for (let row = 0, y = top + 6; y < H; row++, y += rh * 1.1){ let x = -((row * 17) % 40); while (x < W){ const w = (26 + r() * 22) * u; g.fillStyle = shade(base, .8 + r() * .5); g.beginPath(); g.moveTo(x + 3, y); g.lineTo(x + w - 3, y); g.lineTo(x + w, y + rh); g.lineTo(x, y + rh); g.closePath(); g.fill(); g.strokeStyle = 'rgba(6,2,14,.85)'; g.lineWidth = 2; g.stroke(); g.strokeStyle = 'rgba(230,220,250,.16)'; g.beginPath(); g.moveTo(x + 4, y + 2); g.lineTo(x + w - 4, y + 2); g.stroke(); if (r() < .22){ g.fillStyle = 'rgba(70,120,60,.5)'; g.beginPath(); g.ellipse(x + w * r(), y + rh * .3, 9, 4, 0, 0, TAU); g.fill(); } x += w + 2; } } }
+  else if (kind === 'deck'){ const rh = 15 * u; for (let y = top + 4, row = 0; y < H; y += rh, row++){ g.fillStyle = shade(base, .85 + (row % 3) * .12); g.fillRect(0, y, W, rh - 1.5); g.strokeStyle = 'rgba(6,2,10,.8)'; g.lineWidth = 1.8; g.beginPath(); g.moveTo(0, y + rh - 1); g.lineTo(W, y + rh - 1); g.stroke(); let x = r() * 120; while (x < W){ g.beginPath(); g.moveTo(x, y); g.lineTo(x, y + rh - 1); g.stroke(); g.fillStyle = 'rgba(210,190,150,.5)'; g.beginPath(); g.arc(x + 5, y + 4, 1.4, 0, TAU); g.arc(x + 5, y + rh - 5, 1.4, 0, TAU); g.fill(); x += 90 + r() * 140; } for (let k = 0; k < W / 120; k++){ g.strokeStyle = 'rgba(20,10,4,.4)'; g.lineWidth = 1; const gx = r() * W; g.beginPath(); g.moveTo(gx, y + 3); g.bezierCurveTo(gx + 20, y + 5, gx + 40, y + 2, gx + 70, y + 5); g.stroke(); } } }
+  else if (kind === 'lava' || kind === 'basalt'){
+    if (kind === 'basalt'){ const cw = 24 * u; for (let row = 0, y = top + 4; y < H; row++, y += cw * .55){ for (let x = (row % 2) * cw * .5 - cw; x < W; x += cw){ g.fillStyle = shade(base, .8 + r() * .6); g.beginPath(); for (let k = 0; k < 6; k++){ const a = k / 6 * TAU + Math.PI / 6; k ? g.lineTo(x + Math.cos(a) * cw * .52, y + Math.sin(a) * cw * .3) : g.moveTo(x + Math.cos(a) * cw * .52, y + Math.sin(a) * cw * .3); } g.closePath(); g.fill(); g.strokeStyle = 'rgba(255,110,30,.5)'; g.lineWidth = 1.6; g.stroke(); } } }
+    g.save(); g.globalCompositeOperation = 'lighter'; g.strokeStyle = 'rgba(255,110,30,.65)'; g.lineWidth = 2.4; for (let i = 0; i < W / 70; i++){ let x = r() * W, y = top + 4 + r() * 20; g.beginPath(); g.moveTo(x, y); for (let k = 0; k < 6; k++){ x += (r() - .3) * 36; y += 4 + r() * 12; g.lineTo(x, y); } g.stroke(); }
+    for (let i = 0; i < W / 90; i++){ glowAt(g, r() * W, top + 10 + r() * (sandH - 20), 36 * u, '255,90,20', .35); } g.restore();
+  }
+  g.restore();
+  for (let i = 0; i < Math.max(3, W / 150); i++){ const x = r() * W, y = top + 14 + r() * (sandH - 22), pick = r();
+    if (kind === 'bones' || (pick < .3 && kind !== 'gold' && kind !== 'cobble' && kind !== 'deck')){ for (const [w, c] of [[7 * u, 'rgba(6,2,14,.9)'], [4 * u, '#cfc4aa']]){ g.strokeStyle = c; g.lineWidth = w; g.beginPath(); g.moveTo(x, y); g.lineTo(x + (16 + r() * 28) * u, y + (r() - .5) * 8); g.stroke(); } }
+    if (kind === 'pebbles' || pick < .5 && (kind === 'sand' || kind === 'mud' || kind === 'bones' || kind === 'moss')) da2Rock(g, x, y, (7 + r() * 14) * u * (kind === 'pebbles' ? 1.4 : 1), (4 + r() * 6) * u, base, r);
+    if (pick > .84 && kind !== 'gold'){ const s = (9 + r() * 7) * u; g.fillStyle = '#d9cfb6'; g.strokeStyle = 'rgba(6,2,14,.9)'; g.lineWidth = 2; g.beginPath(); g.ellipse(x, y - s * .2, s, s * .85, 0, 0, TAU); g.fill(); g.stroke(); g.fillStyle = '#0a0612'; g.beginPath(); g.arc(x - s * .35, y - s * .3, s * .22, 0, TAU); g.arc(x + s * .35, y - s * .3, s * .22, 0, TAU); g.fill(); g.fillRect(x - s * .3, y + s * .45, s * .6, s * .25); }
+  }
+  if (kind === 'gold'){ for (let i = 0; i < W / 14; i++){ const x = r() * W, y = top + 6 + r() * (sandH - 10), rr = (5 + r() * 5) * u; g.fillStyle = r() < .12 ? ['#b8324a', '#3c9a6a', '#4a6ad8'][(r() * 3) | 0] : shade('#caa24a', .8 + r() * .45); g.strokeStyle = 'rgba(6,2,10,.9)'; g.lineWidth = 1.6; g.beginPath(); g.ellipse(x, y, rr, rr * .6, r() - .5, 0, TAU); g.fill(); g.stroke(); g.fillStyle = 'rgba(255,248,210,.7)'; g.beginPath(); g.ellipse(x - rr * .3, y - rr * .2, rr * .35, rr * .14, 0, 0, TAU); g.fill(); } glowAt(g, W * .5, top + sandH * .5, W * .4, '255,200,90', .12); }
+  if (kind === 'moss'){ for (let i = 0; i < W / 10; i++){ const x = r() * W, y = edge(x) + 4 + r() * (sandH - 10); g.strokeStyle = r() < .3 ? 'rgba(210,190,90,.8)' : `rgba(${60 + r() * 40},${110 + r() * 50},${60 + r() * 30},.85)`; g.lineWidth = 1.8; g.beginPath(); g.moveTo(x, y); g.quadraticCurveTo(x + (r() - .5) * 8, y - 8 * u, x + (r() - .5) * 14, y - (8 + r() * 14) * u); g.stroke(); } for (let i = 0; i < W / 120; i++){ const x = r() * W, y = top + 16 + r() * (sandH - 24); glowAt(g, x, y, 14 * u, '255,225,130', .5); g.fillStyle = '#f2dc8a'; g.beginPath(); g.arc(x, y, 2.2 * u, 0, TAU); g.fill(); } }
+  if (kind === 'slime'){ for (let i = 0; i < W / 70; i++){ const x = r() * W, y = top + 10 + r() * (sandH - 18); glowAt(g, x, y, 46 * u, '80,255,150', .32); g.strokeStyle = 'rgba(150,255,190,.5)'; g.lineWidth = 1.4; g.beginPath(); g.ellipse(x, y, (8 + r() * 12) * u, 4 * u, 0, 0, TAU); g.stroke(); g.beginPath(); g.arc(x + 4, y - 8 * u, 2.4 * u, 0, TAU); g.stroke(); } }
+  if (kind === 'mud'){ for (let i = 0; i < W / 40; i++){ g.strokeStyle = 'rgba(200,190,170,.22)'; g.lineWidth = 1.4; g.beginPath(); g.arc(r() * W, top + 12 + r() * (sandH - 18), (2 + r() * 5) * u, 0, TAU); g.stroke(); } }
+  if (kind !== 'gold' && kind !== 'lava' && kind !== 'basalt' && kind !== 'cobble' && kind !== 'deck'){
+    for (let i = 0; i < Math.max(2, W / 320); i++){ const x = r() * W, y = top + 18 + r() * (sandH - 28), h = (14 + r() * 16) * u; glowAt(g, x, y - h * .5, h * 2.4, kind === 'slime' ? '80,255,150' : '170,120,255', .34);
+      for (const [dx, hh, w] of [[-5, .7, 5], [0, 1, 7], [6, .55, 4.5]]){ g.fillStyle = kind === 'slime' ? '#2fa86a' : '#7a52c8'; g.strokeStyle = 'rgba(6,2,14,.9)'; g.lineWidth = 1.8; g.beginPath(); g.moveTo(x + dx * u - w * u / 2, y); g.lineTo(x + dx * u - w * u * .3, y - h * hh); g.lineTo(x + dx * u + w * u * .1, y - h * hh * 1.12); g.lineTo(x + dx * u + w * u / 2, y); g.closePath(); g.fill(); g.stroke(); g.strokeStyle = 'rgba(236,226,255,.6)'; g.lineWidth = 1.2; g.beginPath(); g.moveTo(x + dx * u - w * u * .2, y - 2); g.lineTo(x + dx * u - w * u * .22, y - h * hh * .8); g.stroke(); } }
+  }
+  for (let i = 0; i < W / 26; i++){ const x = r() * W, y = edge(x) + 1; g.strokeStyle = 'rgba(8,3,18,.85)'; g.lineWidth = 1.4; g.beginPath(); g.moveTo(x, y); g.quadraticCurveTo(x + (r() - .5) * 8, y - 8 * u, x + (r() - .5) * 14, y - (10 + r() * 14) * u); g.stroke(); }
+  if (kind === 'drawn' && scene.floor) g.drawImage(scene.floor, 0, top - 10, W, sandH + 10);
+  g.strokeStyle = 'rgba(8,3,18,.9)'; g.lineWidth = 2.4; g.beginPath(); for (let x = -10; x <= W + 12; x += 8){ const y = edge(x) + (r() - .5) * 1.4; x > -10 ? g.lineTo(x, y) : g.moveTo(x, y); } g.stroke();
+  g.strokeStyle = 'rgba(225,212,245,.22)'; g.lineWidth = 1.6; g.beginPath(); for (let x = -10; x <= W + 12; x += 8){ const y = edge(x) + 3; x > -10 ? g.lineTo(x, y) : g.moveTo(x, y); } g.stroke();
+  const sh = g.createLinearGradient(0, H - 46, 0, H); sh.addColorStop(0, 'rgba(3,1,8,0)'); sh.addColorStop(1, 'rgba(3,1,8,.75)'); g.fillStyle = sh; g.fillRect(0, H - 46, W, 46);
+}
 if (typeof W !== 'undefined' && W){ buildBg(); }
 
 </script>
