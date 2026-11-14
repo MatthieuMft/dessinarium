@@ -322,9 +322,10 @@ input[type=range]{width:100%;accent-color:#a67ae8;min-width:0}
   .win.ed .ed-grid{display:flex;flex-direction:column;flex:1;min-height:0;gap:8px;align-items:stretch}
   .win.ed .ed-main{position:static;flex:1;min-height:0;display:flex;flex-direction:column;border:0;padding:0;background:none;z-index:auto}
   .win.ed .stage{flex:1;min-height:0;justify-content:center}
-  .win.ed .zoombar{top:6px;right:6px}
-  .win.ed #zOut,.win.ed #zIn{display:none}
-  .win.ed .zoombar.idle{opacity:0;pointer-events:none}
+  .win.ed .zoombar{top:auto;bottom:8px;right:8px;gap:0;padding:2px;background:rgba(18,13,27,.82);backdrop-filter:blur(4px);z-index:3}
+  .win.ed .zoombar button{height:42px;min-width:44px;font-size:20px;font-weight:700;padding:0 4px}
+  .win.ed .zoombar #zFit{font-size:13px;min-width:54px}
+  .win.ed .zoombar.idle{opacity:.7}
   .win.ed .toolrow{display:flex;gap:8px;align-items:stretch}
   .win.ed .toolrow .mainacts{display:flex;gap:8px;margin:0;flex:none}
   .win.ed .toolrow .mainacts .gbtn{width:46px;padding:0;font-size:0;border-radius:10px}
@@ -3455,8 +3456,11 @@ function fitPad(){
   if (mob){
     padCv.style.width = '10px'; padCv.style.height = '10px';
     const em = $('.ed-main'), aspect = padCv.width / padCv.height, aw = em.clientWidth, ah = em.clientHeight - 4;
-    const w = Math.max(180, Math.min(aw, ah * aspect)); padCv.style.width = w + 'px'; padCv.style.height = (w / aspect) + 'px'; return;
+    const w = Math.max(180, Math.min(aw, ah * aspect)); padCv.style.width = w + 'px'; padCv.style.height = (w / aspect) + 'px';
+    const zb = $('.zoombar'), sr = stage.getBoundingClientRect(), pr = padCv.getBoundingClientRect(); if (zb){ zb.style.bottom = Math.max(4, sr.bottom - pr.bottom + 8) + 'px'; zb.style.right = Math.max(4, sr.right - pr.right + 8) + 'px'; }
+    return;
   }
+  const zb0 = $('.zoombar'); if (zb0){ zb0.style.bottom = ''; zb0.style.right = ''; }
   padCv.style.width = '10px'; const cw = ($('.ed-main') || stage).clientWidth || 600, twoCol = getComputedStyle($('.ed-grid')).gridTemplateColumns.split(' ').length > 1, short = window.innerHeight < 560, maxH = twoCol ? window.innerHeight - (short ? 152 : 250) : window.innerHeight * .44, aspect = padCv.width / padCv.height;
   const w = Math.max(260, Math.min(cw, maxH * aspect)); padCv.style.width = w + 'px'; padCv.style.height = (w / aspect) + 'px';
 }
